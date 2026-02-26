@@ -100,6 +100,9 @@ class BlockchainService {
       logger.info(msg8);
 
       // Verify contract is alive with timeout (optional - continue if RPC is slow)
+      let msg9Pre = "Attempting to read contract totalRecords...";
+      this.initLog.push(msg9Pre);
+      logger.info(msg9Pre);
       try {
         const recordsPromise = this.contract.totalRecords();
         const timeoutPromise = new Promise((_, reject) =>
