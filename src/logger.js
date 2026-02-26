@@ -15,7 +15,9 @@ const transports = [
 ];
 
 // File transports only in local dev — Vercel's filesystem is read-only
-if (config.nodeEnv !== "production") {
+// Detect Vercel by checking process.env.VERCEL (set automatically by Vercel)
+const isVercel = !!process.env.VERCEL;
+if (!isVercel && config.nodeEnv !== "production") {
   transports.push(
     new winston.transports.File({ filename: "logs/error.log", level: "error" }),
     new winston.transports.File({ filename: "logs/combined.log" })
