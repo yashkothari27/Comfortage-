@@ -93,7 +93,10 @@ app.use((err, req, res, next) => {
 // Kick off blockchain init at module load; errors are logged but do not crash the process.
 blockchainService.initialize()
   .then(() => logger.info("Blockchain service initialized successfully"))
-  .catch((error) => logger.error("Blockchain initialization failed:", error.message));
+  .catch((error) => {
+    logger.error("Blockchain initialization failed:", error.message);
+    if (error.stack) logger.error("Stack trace:", error.stack);
+  });
 
 // ── Local dev: start HTTP server only when run directly ──
 if (require.main === module) {
