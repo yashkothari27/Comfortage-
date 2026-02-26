@@ -99,25 +99,11 @@ class BlockchainService {
       this.initLog.push(msg8);
       logger.info(msg8);
 
-      // Verify contract is alive with timeout (optional - continue if RPC is slow)
-      let msg9Pre = "Attempting to read contract totalRecords...";
-      this.initLog.push(msg9Pre);
-      logger.info(msg9Pre);
-      try {
-        const recordsPromise = this.contract.totalRecords();
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Contract read timeout after 15s")), 15000)
-        );
-        const totalRecords = await Promise.race([recordsPromise, timeoutPromise]);
-        let msg9 = `Contract loaded. Total records on-chain: ${totalRecords}`;
-        this.initLog.push(msg9);
-        logger.info(msg9);
-      } catch (contractError) {
-        let warnMsg = `Contract read failed (will continue anyway): ${contractError.message}`;
-        this.initLog.push(`WARN: ${warnMsg}`);
-        logger.warn(warnMsg);
-        // Don't throw - contract is instantiated, just verification failed
-      }
+      // Skip contract verification - RPC is too slow in Vercel
+      // Contract will be verified when first transaction is attempted
+      let msg9 = "Contract instantiated (verification deferred)";
+      this.initLog.push(msg9);
+      logger.info(msg9);
 
       this.isConnected = true;
       let msg10 = "Blockchain service initialization completed successfully";
