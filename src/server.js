@@ -26,20 +26,16 @@ try {
 }
 
 // ── Security ──
-// Relax CSP for /docs so Swagger UI scripts and styles load
-app.use("/docs", helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-    },
-  },
-}));
-app.use(helmet());
+// Apply helmet globally but disable CSP — we set it manually per-route below
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: config.corsOrigins }));
 app.use(express.json({ limit: "1mb" }));
+
+// Strict CSP for all API routes
+app.use("/api/", (_req, res, next) => {
+  res.setHeader("Content-Security-Policy", "default-src 'none'");
+  next();
+});
 
 // ── Rate Limiting ──
 const limiter = rateLimit({
