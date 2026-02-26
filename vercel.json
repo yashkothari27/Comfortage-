@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "buildCommand": "npm install && npx hardhat compile",
   "builds": [
     {
       "src": "src/server.js",

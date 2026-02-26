@@ -14,6 +14,14 @@ class BlockchainService {
 
   async initialize() {
     try {
+      // Validate required environment variables
+      if (!config.blockchain.contractAddress) {
+        throw new Error("CONTRACT_ADDRESS environment variable is not set");
+      }
+      if (!config.blockchain.privateKey) {
+        throw new Error("DEPLOYER_PRIVATE_KEY environment variable is not set");
+      }
+
       // Connect to Reltime Mainnet
       this.provider = new ethers.JsonRpcProvider(
         config.blockchain.rpcUrl,
@@ -36,6 +44,14 @@ class BlockchainService {
         __dirname,
         "../../artifacts/contracts/DataIntegrity.sol/DataIntegrity.json"
       );
+
+      if (!fs.existsSync(artifactPath)) {
+        throw new Error(
+          `Contract artifact not found at ${artifactPath}. ` +
+          `Make sure to run 'npx hardhat compile' before deploying.`
+        );
+      }
+
       const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
 
       // Instantiate contract
