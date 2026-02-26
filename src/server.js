@@ -75,6 +75,16 @@ app.get("/health", async (req, res) => {
   res.status(statusCode).json(health);
 });
 
+// ── Diagnostic endpoint (no auth) - for debugging initialization ──
+app.get("/health/debug", (req, res) => {
+  res.json({
+    isConnected: blockchainService.isConnected,
+    initError: blockchainService.initError,
+    initLog: blockchainService.initLog,
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // ── API Routes (auth required) ──
 app.use("/api/v1/hash", authenticateToken, hashRoutes);
 

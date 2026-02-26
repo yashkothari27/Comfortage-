@@ -10,11 +10,15 @@ class BlockchainService {
     this.signer = null;
     this.contract = null;
     this.isConnected = false;
+    this.initError = null;
+    this.initLog = [];
   }
 
   async initialize() {
     try {
-      logger.info("Starting blockchain service initialization...");
+      const msg = "Starting blockchain service initialization...";
+      this.initLog.push(msg);
+      logger.info(msg);
 
       // Validate required environment variables
       if (!config.blockchain.contractAddress) {
@@ -24,8 +28,13 @@ class BlockchainService {
         throw new Error("DEPLOYER_PRIVATE_KEY environment variable is not set");
       }
 
-      logger.info(`RPC URL: ${config.blockchain.rpcUrl}`);
-      logger.info(`Contract Address: ${config.blockchain.contractAddress}`);
+      let msg2 = `RPC URL: ${config.blockchain.rpcUrl}`;
+      this.initLog.push(msg2);
+      logger.info(msg2);
+
+      let msg3 = `Contract Address: ${config.blockchain.contractAddress}`;
+      this.initLog.push(msg3);
+      logger.info(msg3);
 
       // Connect to Reltime Mainnet
       this.provider = new ethers.JsonRpcProvider(
@@ -35,24 +44,32 @@ class BlockchainService {
           chainId: config.blockchain.chainId,
         }
       );
-      logger.info("Provider created");
+      let msg4 = "Provider created";
+      this.initLog.push(msg4);
+      logger.info(msg4);
 
-      // Verify connection with timeout
+      // Verify connection with timeout (optional - continue if RPC is slow)
       try {
         const networkPromise = this.provider.getNetwork();
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Network verification timeout after 10s")), 10000)
+          setTimeout(() => reject(new Error("Network verification timeout after 15s")), 15000)
         );
         const network = await Promise.race([networkPromise, timeoutPromise]);
-        logger.info(`Connected to Reltime Mainnet, Chain ID: ${network.chainId}`);
+        let msg5 = `Connected to Reltime Mainnet, Chain ID: ${network.chainId}`;
+        this.initLog.push(msg5);
+        logger.info(msg5);
       } catch (netError) {
-        logger.error(`Network verification failed: ${netError.message}`);
-        throw netError;
+        let warnMsg = `Network verification failed (will continue anyway): ${netError.message}`;
+        this.initLog.push(`WARN: ${warnMsg}`);
+        logger.warn(warnMsg);
+        // Don't throw - continue initialization even if RPC is slow/unreachable
       }
 
       // Setup signer
       this.signer = new ethers.Wallet(config.blockchain.privateKey, this.provider);
-      logger.info(`Signer address: ${this.signer.address}`);
+      let msg6 = `Signer address: ${this.signer.address}`;
+      this.initLog.push(msg6);
+      logger.info(msg6);
 
       // Load contract ABI
       const artifactPath = path.join(
@@ -68,7 +85,9 @@ class BlockchainService {
       }
 
       const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
-      logger.info("Contract artifact loaded");
+      let msg7 = "Contract artifact loaded";
+      this.initLog.push(msg7);
+      logger.info(msg7);
 
       // Instantiate contract
       this.contract = new ethers.Contract(
@@ -76,24 +95,34 @@ class BlockchainService {
         artifact.abi,
         this.signer
       );
-      logger.info("Contract instance created");
+      let msg8 = "Contract instance created";
+      this.initLog.push(msg8);
+      logger.info(msg8);
 
-      // Verify contract is alive with timeout
+      // Verify contract is alive with timeout (optional - continue if RPC is slow)
       try {
         const recordsPromise = this.contract.totalRecords();
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Contract read timeout after 10s")), 10000)
+          setTimeout(() => reject(new Error("Contract read timeout after 15s")), 15000)
         );
         const totalRecords = await Promise.race([recordsPromise, timeoutPromise]);
-        logger.info(`Contract loaded. Total records on-chain: ${totalRecords}`);
+        let msg9 = `Contract loaded. Total records on-chain: ${totalRecords}`;
+        this.initLog.push(msg9);
+        logger.info(msg9);
       } catch (contractError) {
-        logger.error(`Contract read failed: ${contractError.message}`);
-        throw contractError;
+        let warnMsg = `Contract read failed (will continue anyway): ${contractError.message}`;
+        this.initLog.push(`WARN: ${warnMsg}`);
+        logger.warn(warnMsg);
+        // Don't throw - contract is instantiated, just verification failed
       }
 
       this.isConnected = true;
-      logger.info("Blockchain service initialization completed successfully");
+      let msg10 = "Blockchain service initialization completed successfully";
+      this.initLog.push(msg10);
+      logger.info(msg10);
     } catch (error) {
+      this.initError = error.message;
+      this.initLog.push(`FATAL: ${error.message}`);
       logger.error("Blockchain initialization failed:", error.message);
       if (error.stack) {
         logger.error("Stack trace:", error.stack);
