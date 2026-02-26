@@ -224,6 +224,13 @@ class BlockchainService {
    */
   async getHealth() {
     try {
+      if (!this.isConnected) {
+        return {
+          status: "unhealthy",
+          error: "Blockchain service not initialized",
+        };
+      }
+
       const [blockNumber, network, totalRecords] = await Promise.all([
         this.provider.getBlockNumber(),
         this.provider.getNetwork(),
@@ -260,7 +267,7 @@ class BlockchainService {
 
   _ensureConnected() {
     if (!this.isConnected) {
-      throw new Error("Blockchain service not initialized. Call initialize() first.");
+      throw new Error("Blockchain service not initialized. Check RPC connection and environment variables.");
     }
   }
 }
