@@ -5,8 +5,8 @@
       "src": "src/server.js",
       "use": "@vercel/node",
       "config": {
-        "installCommand": "npm install",
-        "buildCommand": "npx hardhat compile"
+        "installCommand": "npm install && npm run compile",
+        "buildCommand": "echo 'Artifacts generated during install phase'"
       }
     }
   ],
