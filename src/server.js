@@ -2,7 +2,6 @@ const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
-const swaggerUi = require("swagger-ui-express");
 const fs = require("fs");
 const path = require("path");
 const config = require("./config");
@@ -46,17 +45,35 @@ const limiter = rateLimit({
 app.use("/api/", limiter);
 
 // ── Swagger Documentation (no auth) ──
-app.use(
-  "/docs",
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerSpec, {
-    swaggerOptions: {
-      persistAuthorization: true,
-      displayOperationId: true,
-    },
-    customCss: ".swagger-ui .topbar { display: none }",
-  })
-);
+// Serve Swagger UI via CDN to avoid Vercel static asset routing issues
+app.get("/docs", (_req, res) => {
+  const specUrl = "/openapi.json";
+  res.setHeader("Content-Type", "text/html");
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DataIntegrity API — Swagger UI</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+<script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
+<script>
+  SwaggerUIBundle({
+    url: "${specUrl}",
+    dom_id: '#swagger-ui',
+    presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+    layout: "StandaloneLayout",
+    persistAuthorization: true,
+    displayOperationId: true,
+  });
+</script>
+<style>.swagger-ui .topbar { display: none }</style>
+</body>
+</html>`);
+});
 
 // Swagger JSON endpoint
 app.get("/openapi.json", (req, res) => {
