@@ -1,0 +1,273 @@
+{
+  "info": {
+    "_postman_id": "comfortage-t33-dataintegrity",
+    "name": "COMFORTage T3.3 - DataIntegrity API",
+    "description": "Blockchain Data Integrity Service on Reltime Mainnet",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "12345678"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health & Status",
+      "item": [
+        {
+          "name": "Get Health Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Check API and blockchain health (no auth required)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Hash Storage",
+      "item": [
+        {
+          "name": "Store New Hash",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"datasetId\": \"DS-PILOT-{{$timestamp}}\",\n  \"hash\": \"0x3c59dc048e8850243be8079a5c74d079934b91d7321b8e09f8ce1fde91baa2ae\",\n  \"metadataCID\": \"QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/hash",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "hash"
+              ]
+            },
+            "description": "Store a new dataset hash on Reltime blockchain"
+          }
+        },
+        {
+          "name": "Update Hash",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hash\": \"0x5e9dc048e8850243be8079a5c74d079934b91d7321b8e09f8ce1fde91baa999\",\n  \"metadataCID\": \"QmNewCID123456789...\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/hash/{{dataset_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "hash",
+                "{{dataset_id}}"
+              ]
+            },
+            "description": "Update the hash for an existing dataset"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Hash Retrieval",
+      "item": [
+        {
+          "name": "Get Hash",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/hash/{{dataset_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "hash",
+                "{{dataset_id}}"
+              ]
+            },
+            "description": "Retrieve the stored hash for a dataset"
+          }
+        },
+        {
+          "name": "Get Hash History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/hash/history/{{dataset_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "hash",
+                "history",
+                "{{dataset_id}}"
+              ]
+            },
+            "description": "Get all hash versions for a dataset (chain of custody)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Validation",
+      "item": [
+        {
+          "name": "Validate Hash (With Audit)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"datasetId\": \"{{dataset_id}}\",\n  \"hash\": \"0x5e9dc048e8850243be8079a5c74d079934b91d7321b8e09f8ce1fde91baa999\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/hash/validate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "hash",
+                "validate"
+              ]
+            },
+            "description": "Validate data integrity with on-chain audit event recording"
+          }
+        },
+        {
+          "name": "Quick Integrity Check (Read-Only)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/hash/check/{{dataset_id}}/0x5e9dc048e8850243be8079a5c74d079934b91d7321b8e09f8ce1fde91baa999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "hash",
+                "check",
+                "{{dataset_id}}",
+                "0x5e9dc048e8850243be8079a5c74d079934b91d7321b8e09f8ce1fde91baa999"
+              ]
+            },
+            "description": "Quick read-only integrity check (no on-chain transaction)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "1. Set Variables",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Set your variables here:",
+                  "pm.collectionVariables.set('base_url', 'http://localhost:3000');",
+                  "pm.collectionVariables.set('jwt_token', 'YOUR_TOKEN_HERE');",
+                  "pm.collectionVariables.set('dataset_id', 'DS-PILOT-001');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Before using this collection:\n\n1. Click \"Setup\" folder\n2. Click \"Set Variables\" request\n3. Scroll down to \"Pre-request Script\" tab\n4. Update the values:\n   - **base_url**: Your API URL (default: http://localhost:3000)\n   - **jwt_token**: Your JWT token from `node -e \"require('./src/middleware/auth').generateToken('my-service')\"`\n   - **dataset_id**: A test dataset ID\n5. Click Send"
+          }
+        },
+        {
+          "name": "2. Generate JWT Token",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://nodejs.org/",
+              "protocol": "https",
+              "host": [
+                "nodejs",
+                "org"
+              ]
+            },
+            "description": "To generate a JWT token, run in your terminal:\n\n```bash\nnode -e \"require('./src/middleware/auth').generateToken('my-service-name')\"\n```\n\nCopy the token and paste it in the \"Set Variables\" pre-request script in the `jwt_token` variable."
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "dataset_id",
+      "value": "DS-PILOT-001",
+      "type": "string"
+    }
+  ]
+}
