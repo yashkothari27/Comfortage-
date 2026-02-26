@@ -89,29 +89,27 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal server error" });
 });
 
-// ── Start ──
-async function start() {
+// ── Initialization ──
+// Kick off blockchain init at module load; errors are logged but do not crash the process.
+blockchainService.initialize()
+  .then(() => logger.info("Blockchain service initialized successfully"))
+  .catch((error) => logger.error("Blockchain initialization failed:", error.message));
+
+// ── Local dev: start HTTP server only when run directly ──
+if (require.main === module) {
   console.log(`
   ╔═══════════════════════════════════════════════════════════╗
   ║   COMFORTage T3.3 — Blockchain Data Integrity Service    ║
   ║   Network: Reltime Mainnet (Chain ID: 32323)              ║
   ╚═══════════════════════════════════════════════════════════╝
   `);
-
-  try {
-    await blockchainService.initialize();
-    logger.info("Blockchain service initialized successfully");
-
-    app.listen(config.port, () => {
-      logger.info(`API server running on port ${config.port}`);
-      logger.info(`Health check: http://localhost:${config.port}/health`);
-      logger.info(`API docs:     http://localhost:${config.port}/docs`);
-      logger.info(`API base:     http://localhost:${config.port}/api/v1/hash`);
-    });
-  } catch (error) {
-    logger.error("Failed to start server:", error);
-    process.exit(1);
-  }
+  app.listen(config.port, () => {
+    logger.info(`API server running on port ${config.port}`);
+    logger.info(`Health check: http://localhost:${config.port}/health`);
+    logger.info(`API docs:     http://localhost:${config.port}/docs`);
+    logger.info(`API base:     http://localhost:${config.port}/api/v1/hash`);
+  });
 }
 
-start();
+// ── Vercel serverless export ──
+module.exports = app;
