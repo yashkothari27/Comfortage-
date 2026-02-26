@@ -14,6 +14,8 @@ class BlockchainService {
 
   async initialize() {
     try {
+      logger.info("Starting blockchain service initialization...");
+
       // Validate required environment variables
       if (!config.blockchain.contractAddress) {
         throw new Error("CONTRACT_ADDRESS environment variable is not set");
@@ -21,6 +23,9 @@ class BlockchainService {
       if (!config.blockchain.privateKey) {
         throw new Error("DEPLOYER_PRIVATE_KEY environment variable is not set");
       }
+
+      logger.info(`RPC URL: ${config.blockchain.rpcUrl}`);
+      logger.info(`Contract Address: ${config.blockchain.contractAddress}`);
 
       // Connect to Reltime Mainnet
       this.provider = new ethers.JsonRpcProvider(
@@ -30,10 +35,20 @@ class BlockchainService {
           chainId: config.blockchain.chainId,
         }
       );
+      logger.info("Provider created");
 
-      // Verify connection
-      const network = await this.provider.getNetwork();
-      logger.info(`Connected to Reltime Mainnet, Chain ID: ${network.chainId}`);
+      // Verify connection with timeout
+      try {
+        const networkPromise = this.provider.getNetwork();
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Network verification timeout after 10s")), 10000)
+        );
+        const network = await Promise.race([networkPromise, timeoutPromise]);
+        logger.info(`Connected to Reltime Mainnet, Chain ID: ${network.chainId}`);
+      } catch (netError) {
+        logger.error(`Network verification failed: ${netError.message}`);
+        throw netError;
+      }
 
       // Setup signer
       this.signer = new ethers.Wallet(config.blockchain.privateKey, this.provider);
@@ -53,6 +68,7 @@ class BlockchainService {
       }
 
       const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
+      logger.info("Contract artifact loaded");
 
       // Instantiate contract
       this.contract = new ethers.Contract(
@@ -60,14 +76,28 @@ class BlockchainService {
         artifact.abi,
         this.signer
       );
+      logger.info("Contract instance created");
 
-      // Verify contract is alive
-      const totalRecords = await this.contract.totalRecords();
-      logger.info(`Contract loaded. Total records on-chain: ${totalRecords}`);
+      // Verify contract is alive with timeout
+      try {
+        const recordsPromise = this.contract.totalRecords();
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Contract read timeout after 10s")), 10000)
+        );
+        const totalRecords = await Promise.race([recordsPromise, timeoutPromise]);
+        logger.info(`Contract loaded. Total records on-chain: ${totalRecords}`);
+      } catch (contractError) {
+        logger.error(`Contract read failed: ${contractError.message}`);
+        throw contractError;
+      }
 
       this.isConnected = true;
+      logger.info("Blockchain service initialization completed successfully");
     } catch (error) {
       logger.error("Blockchain initialization failed:", error.message);
+      if (error.stack) {
+        logger.error("Stack trace:", error.stack);
+      }
       throw error;
     }
   }
