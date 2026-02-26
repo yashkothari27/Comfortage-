@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "env": {
+    "RELTIME_RPC_URL": "@reltime_rpc_url",
+    "RELTIME_CHAIN_ID": "32323",
+    "CONTRACT_ADDRESS": "@contract_address",
+    "DEPLOYER_PRIVATE_KEY": "@deployer_private_key",
+    "JWT_SECRET": "@jwt_secret"
+  },
+  "builds": [
+    {
+      "src": "src/server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "src/server.js"
+    }
+  ],
+  "functions": {
+    "src/server.js": {
+      "memory": 1024,
+      "maxDuration": 60
+    }
+  }
+}

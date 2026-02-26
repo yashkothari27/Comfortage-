@@ -3,6 +3,8 @@ const helmet = require("helmet");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const swaggerUi = require("swagger-ui-express");
+const fs = require("fs");
+const path = require("path");
 const config = require("./config");
 const logger = require("./logger");
 const { authenticateToken } = require("./middleware/auth");
@@ -11,6 +13,17 @@ const blockchainService = require("./services/blockchainService");
 const swaggerSpec = require("./swagger");
 
 const app = express();
+
+// Load Postman collection once at startup (for Vercel serverless compatibility)
+let postmanCollectionBuffer = null;
+try {
+  const collectionPath = path.join(__dirname, "../postman_collection.json");
+  if (fs.existsSync(collectionPath)) {
+    postmanCollectionBuffer = fs.readFileSync(collectionPath);
+  }
+} catch (err) {
+  logger.warn("Could not load Postman collection file at startup", err.message);
+}
 
 // ── Security ──
 app.use(helmet());
@@ -46,13 +59,13 @@ app.get("/openapi.json", (req, res) => {
 
 // ── Postman Collection download (no auth) ──
 app.get("/postman-collection.json", (req, res) => {
-  const fs = require("fs");
-  const path = require("path");
-  const collectionPath = path.join(__dirname, "../postman_collection.json");
+  if (!postmanCollectionBuffer) {
+    return res.status(404).json({ error: "Postman collection not found" });
+  }
   
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Content-Disposition", "attachment; filename=DataIntegrity-API.postman_collection.json");
-  res.sendFile(collectionPath);
+  res.send(postmanCollectionBuffer);
 });
 
 // ── Health endpoint (no auth) ──
