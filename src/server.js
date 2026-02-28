@@ -30,6 +30,10 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: config.corsOrigins }));
 app.use(express.json({ limit: "1mb" }));
 
+// ── Static Files ──
+// Serve logo and other static assets from public directory
+app.use(express.static(path.join(__dirname, "../public")));
+
 // Strict CSP for all API routes
 app.use("/api/", (_req, res, next) => {
   res.setHeader("Content-Security-Policy", "default-src 'none'");
@@ -55,9 +59,36 @@ app.get("/docs", (_req, res) => {
   <meta charset="UTF-8">
   <title>DataIntegrity API — Swagger UI</title>
   <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+  <style>
+    .swagger-ui .topbar {
+      display: none;
+    }
+    .swagger-ui-wrap {
+      padding-top: 0;
+    }
+    .api-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);
+      border-bottom: 2px solid #e94e1b;
+      min-height: 80px;
+    }
+    .api-header img {
+      height: 60px;
+      width: auto;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    }
+  </style>
 </head>
 <body>
-<div id="swagger-ui"></div>
+<div class="swagger-ui-wrap">
+  <div class="api-header">
+    <img src="/comfortage-logo.svg" alt="COMFORTage Logo">
+  </div>
+  <div id="swagger-ui"></div>
+</div>
 <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
 <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
 <script>
@@ -70,7 +101,6 @@ app.get("/docs", (_req, res) => {
     displayOperationId: true,
   });
 </script>
-<style>.swagger-ui .topbar { display: none }</style>
 </body>
 </html>`);
 });

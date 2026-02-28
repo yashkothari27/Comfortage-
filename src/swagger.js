@@ -8,6 +8,10 @@ const swaggerSpec = {
   info: {
     title: 'DataIntegrity API',
     version: '1.0.0',
+    'x-logo': {
+      url: '/comfortage-logo.svg',
+      altText: 'COMFORTage Logo',
+    },
     description: `
 COMFORTage T3.3 — Blockchain Data Integrity Service
 
