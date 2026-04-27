@@ -1,0 +1,209 @@
+{
+  "contractAddress": "0xb032Fca326E02254d50509f35F8D6fd4cccDB3B0",
+  "network": "Reltime Mainnet",
+  "chainId": 32323,
+  "deployedAt": "2026-04-22T09:04:34.467Z",
+  "deployedBlock": 38219356,
+  "users": [
+    {
+      "serviceId": "nurse-1",
+      "role": "nurse",
+      "label": "Nurse / IoT Device 1",
+      "address": "0x8a11d644aaD9f880fB66258e87b2Bdcd11825Bc9",
+      "privateKey": "0xa4548ab4b1ee56838dcf3f916a22a52d991de6340ce893fdc31d7c5c1ffb2ef9",
+      "jwtToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2aWNlSWQiOiJudXJzZS0xIiwicm9sZSI6Im51cnNlIiwiaWF0IjoxNzc2ODQ4MzE3LCJleHAiOjE4MDgzODQzMTd9.ZrIP-PLJvF9CNaVn2G4u5IkHkPT7ScLHUbKNX252peY",
+      "onChainRole": "INGESTION_ROLE"
+    },
+    {
+      "serviceId": "nurse-2",
+      "role": "nurse",
+      "label": "Nurse / IoT Device 2",
+      "address": "0xE55E657e7f6Fe089f3793606aD5D8649773dAE9b",
+      "privateKey": "0x3cd940c0e5c10159094c513eb8cbfd7de8660430c09b271bce24fae18be10794",
+      "jwtToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2aWNlSWQiOiJudXJzZS0yIiwicm9sZSI6Im51cnNlIiwiaWF0IjoxNzc2ODQ4MzE3LCJleHAiOjE4MDgzODQzMTd9.ADqwGg0RIuk9GlIzbsrfxen7FvlPfoNpYt2GRWxg5EM",
+      "onChainRole": "INGESTION_ROLE"
+    },
+    {
+      "serviceId": "doctor-1",
+      "role": "doctor",
+      "label": "Doctor / Physician 1",
+      "address": "0xa7e4E642dD004c9Df4E2a6894fD915e95E503B40",
+      "privateKey": "0x41af26a4a686dca3b64232249eca1b04e8b259b4ddb39d14b4411d475ab8557a",
+      "jwtToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2aWNlSWQiOiJkb2N0b3ItMSIsInJvbGUiOiJkb2N0b3IiLCJpYXQiOjE3NzY4NDgzMTcsImV4cCI6MTgwODM4NDMxN30.M7B9ZEzpFxa6DbrQZHyVVYElRjHxQzMHexNpV_mak3Q",
+      "onChainRole": "VALIDATOR_ROLE"
+    },
+    {
+      "serviceId": "doctor-2",
+      "role": "doctor",
+      "label": "Doctor / Physician 2",
+      "address": "0x62342480C54EcD8F4DB663B3c8094fd5b303638a",
+      "privateKey": "0xe0ac12a1fa5bb84c8fe825867316511186a2865e4a500a2bbd071c4975bb720f",
+      "jwtToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2aWNlSWQiOiJkb2N0b3ItMiIsInJvbGUiOiJkb2N0b3IiLCJpYXQiOjE3NzY4NDgzMTcsImV4cCI6MTgwODM4NDMxN30.kn_hUqL9shJE_R0anJL7BnwkCbHwAJzBsvK0M0MMj1M",
+      "onChainRole": "VALIDATOR_ROLE"
+    },
+    {
+      "serviceId": "pharmacist-1",
+      "role": "pharmacist",
+      "label": "Pharmacist 1",
+      "address": "0x122a25BBC0532827fe4739838925AA4AC0ab2C78",
+      "privateKey": "0xcab62e5cbebf57e858730b85e4b871186bfa0c3d156a9b3053657b82ebfb9463",
+      "jwtToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2aWNlSWQiOiJwaGFybWFjaXN0LTEiLCJyb2xlIjoicGhhcm1hY2lzdCIsImlhdCI6MTc3Njg0ODMxNywiZXhwIjoxODA4Mzg0MzE3fQ.N_wEGcYkZpLZ7m98BX1uSYco31bRUVd1NkYrnpqA08Q",
+      "onChainRole": "PHARMACIST_ROLE"
+    },
+    {
+      "serviceId": "pharmacist-2",
+      "role": "pharmacist",
+      "label": "Pharmacist 2",
+      "address": "0x47999Cf3577Fc38083aB706e8a23d9c9522Fc3DD",
+      "privateKey": "0x7c047d8dfb1437a4ca3f22a8502e2871c37f69e1baef04208b07771f31f763a7",
+      "jwtToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2aWNlSWQiOiJwaGFybWFjaXN0LTIiLCJyb2xlIjoicGhhcm1hY2lzdCIsImlhdCI6MTc3Njg0ODMxNywiZXhwIjoxODA4Mzg0MzE3fQ.t3UBOsTEqz7i3lc2SQ-RpEDpqWGPTPh6I9e3DzFNR3c",
+      "onChainRole": "PHARMACIST_ROLE"
+    },
+    {
+      "serviceId": "consent_manager-1",
+      "role": "consent_manager",
+      "label": "Consent Manager 1",
+      "address": "0x30F08DAAd87F51291bCD2410f8dD155B3B1994B4",
+      "privateKey": "0xc3d97a42d207084c46bdfd4249dd915aac44715a68e3c946f3bc917ecd56205b",
+      "jwtToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2aWNlSWQiOiJjb25zZW50X21hbmFnZXItMSIsInJvbGUiOiJjb25zZW50X21hbmFnZXIiLCJpYXQiOjE3NzY4NDgzMTcsImV4cCI6MTgwODM4NDMxN30.Dv4WdLMufoLcKA-dpdRjIIxdRdKv_7bNyaZHV-NtI_4",
+      "onChainRole": "CONSENT_MANAGER_ROLE"
+    },
+    {
+      "serviceId": "consent_manager-2",
+      "role": "consent_manager",
+      "label": "Consent Manager 2",
+      "address": "0xF087C2d87B015E3b9d08f4f9e54424F8D0C000B2",
+      "privateKey": "0xa9ec81621e6c3ad79ecfda1ae512545b15c67ba8585b11a4473a88597c1f6b2b",
+      "jwtToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2aWNlSWQiOiJjb25zZW50X21hbmFnZXItMiIsInJvbGUiOiJjb25zZW50X21hbmFnZXIiLCJpYXQiOjE3NzY4NDgzMTcsImV4cCI6MTgwODM4NDMxN30.e9rkyO22ukNWMtQ03fUOXYgpkjAxltE8zOtpk-8-nKs",
+      "onChainRole": "CONSENT_MANAGER_ROLE"
+    },
+    {
+      "serviceId": "auditor-1",
+      "role": "auditor",
+      "label": "Compliance Auditor 1",
+      "address": "0x58f8910FCdC3180FE561f9ea5f4037735E98782B",
+      "privateKey": "0x75f2ffb21b4541a563fb2bc4a9bbd47be06dac0ddc0660c88f0fa5ce781ead8b",
+      "jwtToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2aWNlSWQiOiJhdWRpdG9yLTEiLCJyb2xlIjoiYXVkaXRvciIsImlhdCI6MTc3Njg0ODMxNywiZXhwIjoxODA4Mzg0MzE3fQ.b86SgXurUXti6uiuDXIjLF2z8wNK1-YIlpK78Q1p0J4",
+      "onChainRole": "AUDITOR_ROLE"
+    },
+    {
+      "serviceId": "auditor-2",
+      "role": "auditor",
+      "label": "Compliance Auditor 2",
+      "address": "0x21A53f2cD06A9f34D523FF3865052fC696132d0F",
+      "privateKey": "0x7e877bb718e6942360ac0e6f0a19df75d2de475aa15ad98d5abc148d58bb1bf3",
+      "jwtToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2aWNlSWQiOiJhdWRpdG9yLTIiLCJyb2xlIjoiYXVkaXRvciIsImlhdCI6MTc3Njg0ODMxNywiZXhwIjoxODA4Mzg0MzE3fQ.EaGf__V_Gj34iS5Hz5RUcFDUD8JUKHEdgJRqmyLk4rw",
+      "onChainRole": "AUDITOR_ROLE"
+    }
+  ],
+  "seededRecords": [
+    {
+      "datasetId": "LAB-P10042-CBC-20240318",
+      "plaintext": "CBC|patient:P10042|WBC:6.2|RBC:4.81|HGB:14.2|HCT:42.1|MCV:88|PLT:210|date:2024-03-18|lab:RELTIME-LAB-01",
+      "recordType": "LAB_RESULT",
+      "submitter": "nurse-1",
+      "metadataCID": "QmLabCBCP10042Mar2024",
+      "hash": "0xd78531069f7c4c74c2003d553aea4c8c80615e06994ac9ff8c2d594ba1a2ebd6",
+      "txHash": "0x983090774015ca861ba885f530b38a60faa25f48b080c0365458f79c41c65893",
+      "blockNumber": 38219305
+    },
+    {
+      "datasetId": "LAB-P10042-CMP-20240318",
+      "plaintext": "CMP|patient:P10042|glucose:182|BUN:14|creatinine:0.9|eGFR:88|Na:139|K:4.1|date:2024-03-18|lab:RELTIME-LAB-01",
+      "recordType": "LAB_RESULT",
+      "submitter": "nurse-1",
+      "metadataCID": "QmLabCMPP10042Mar2024",
+      "hash": "0x70445bdafd4cf6f74db15353dc5197c8dc780af4847a5b430029d1d137dbf0da",
+      "txHash": "0x2774d297bf0f1c4467e0add43fb0c21b1d822fc751738c6b0e7d09602e4e720d",
+      "blockNumber": 38219306
+    },
+    {
+      "datasetId": "LAB-P10099-HBA1C-20240320",
+      "plaintext": "HbA1c|patient:P10099|result:7.4%|ref:<5.7%|date:2024-03-20|lab:RELTIME-LAB-02",
+      "recordType": "LAB_RESULT",
+      "submitter": "nurse-2",
+      "metadataCID": "QmLabHba1cP10099",
+      "hash": "0xeb07fa455403a60c38fd144692b59112536fe72105edc467f78563dc57d16739",
+      "txHash": "0xaf31c664116308c234125535e7949cfd8723b68e1a61345303efd04e513bec45",
+      "blockNumber": 38219310
+    },
+    {
+      "datasetId": "IMG-P10099-CXR-20240320",
+      "plaintext": "DICOM|modality:CXR|patient:P10099|radiologist:DR-PATEL|findings:ClearLungs|impression:NoAcuteDisease|date:2024-03-20",
+      "recordType": "IMAGING",
+      "submitter": "nurse-2",
+      "metadataCID": "QmCxrP10099",
+      "hash": "0x370285bf886713e4473eeba7f445b4c7e3c291d96abef8cf2bc8a66761e62efe",
+      "txHash": "0x0f432c9efd7dafcffc369c8e17715f052cc851052dbd0ee04518503633f0216b",
+      "blockNumber": 38219313
+    },
+    {
+      "datasetId": "RX-P10042-MET-20240318",
+      "plaintext": "Rx|drug:Metformin|dose:500mg|freq:BID|patient:P10042|prescriber:DR-CHEN|qty:60|refills:5|date:2024-03-18",
+      "recordType": "PRESCRIPTION",
+      "submitter": "pharmacist-1",
+      "metadataCID": "QmRxMetforminP10042",
+      "hash": "0xb133f166bb54f98c86f05306aa9f425d3913219ba47a122c9f096a9d99d64814",
+      "txHash": "0x325b963abfba4fc216b5a52124027b80ca806b8fdcb36cce772ecc065929d8b5",
+      "blockNumber": 38219314
+    },
+    {
+      "datasetId": "RX-P10042-AML-20240318",
+      "plaintext": "Rx|drug:Amlodipine|dose:5mg|freq:QD|patient:P10042|prescriber:DR-CHEN|qty:30|refills:11|date:2024-03-18",
+      "recordType": "PRESCRIPTION",
+      "submitter": "pharmacist-1",
+      "metadataCID": "QmRxAmlodipineP10042",
+      "hash": "0x4894faeaf9c801cce55f27f1518e5a585b1178523605f80914419adc1bc098f9",
+      "txHash": "0x5a88dfd23ee28ac6cfacaa49b87ad956be762b4632c37beebdd0d6766075ac3c",
+      "blockNumber": 38219318
+    },
+    {
+      "datasetId": "RX-P10099-INS-20240320",
+      "plaintext": "Rx|drug:InsulinGlargine|dose:10units|freq:QHS|patient:P10099|prescriber:DR-CHEN|qty:1vial|refills:3|date:2024-03-20",
+      "recordType": "PRESCRIPTION",
+      "submitter": "pharmacist-2",
+      "metadataCID": "QmRxInsulinP10099",
+      "hash": "0xa5a484f3eb1c9fb5e5f2ce5cb9702d5adf63c0da8dc182db0d2492c84dbf826c",
+      "txHash": "0x1f5cdc8e5565b353ea9b70ed983315781947f19ca6f59cf0080364097be7e75a",
+      "blockNumber": 38219321
+    },
+    {
+      "datasetId": "CONSENT-P10042-STUDY-20240315",
+      "plaintext": "Consent|study:COMFORT-T33|patient:P10042|signed:2024-03-15T10:22:00Z|witness:NURSE-SARA|version:v2.1",
+      "recordType": "CONSENT_FORM",
+      "submitter": "consent_manager-1",
+      "metadataCID": "QmConsentP10042Study",
+      "hash": "0xadaff3c34237d3709f76ad665bf9994dded97682f62368e4dc121f7742787b72",
+      "txHash": "0xc78dab414b54d7fc0fafe23c96d9c5b08fdca44e36a3c0328b8bf0e131e5a5cf",
+      "blockNumber": 38219322
+    },
+    {
+      "datasetId": "CONSENT-P10099-STUDY-20240316",
+      "plaintext": "Consent|study:COMFORT-T33|patient:P10099|signed:2024-03-16T09:10:00Z|witness:NURSE-SARA|version:v2.1",
+      "recordType": "CONSENT_FORM",
+      "submitter": "consent_manager-2",
+      "metadataCID": "QmConsentP10099Study",
+      "hash": "0xa095351fa4f8d45a68d264b095368cbfec41a1e13cc15951473340c201a8e080",
+      "txHash": "0xc16da04290859bab51a253c9820c413b337655a49c3572f4bb39e1f90896db5f",
+      "blockNumber": 38219326
+    },
+    {
+      "datasetId": "DX-P10042-T2DM-HTN-20240318",
+      "plaintext": "ICD10:E11.9,I10|diagnoses:Type2Diabetes,Hypertension|patient:P10042|attending:DR-CHEN|date:2024-03-18",
+      "recordType": "DIAGNOSIS",
+      "submitter": "nurse-1",
+      "metadataCID": "QmDxP10042",
+      "hash": "0xabb1ffb736194a585ddbaaca66d640498ca09e893ae54b4cbd4893dbfb991a69",
+      "txHash": "0x00e5faa5f602cfc79dd4b2362219c4011b6b0d9e5fa4acb7652240c6b9493bca",
+      "blockNumber": 38219330
+    }
+  ],
+  "auditSummary": {
+    "labResults": 3,
+    "diagnoses": 1,
+    "prescriptions": 3,
+    "consentForms": 2,
+    "imagingRecords": 1,
+    "total": 10
+  }
+}

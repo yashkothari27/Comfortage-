@@ -26,6 +26,12 @@ module.exports = {
     ? process.env.CORS_ORIGINS.split(",")
     : ["*"],
 
+  // Wallet encryption (AES-256-GCM) — used to encrypt user private keys at rest
+  walletEncryptionKey: process.env.WALLET_ENCRYPTION_KEY,
+
+  // SQLite database
+  dbPath: process.env.DB_PATH || "./data/comfortage.db",
+
   // Logging
   logLevel: process.env.LOG_LEVEL || "info",
 };

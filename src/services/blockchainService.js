@@ -121,16 +121,30 @@ class BlockchainService {
   }
 
   /**
-   * Store a dataset hash on-chain.
-   * Called by T3.1 ingestion pipeline via this API.
+   * Record type enum mirrors the Solidity RecordType enum.
+   * LAB_RESULT=0, DIAGNOSIS=1, PRESCRIPTION=2, CONSENT_FORM=3, IMAGING=4
    */
-  async storeHash(datasetId, hashHex, metadataCID = "") {
+  static RECORD_TYPES = {
+    LAB_RESULT:      0,
+    DIAGNOSIS:       1,
+    PRESCRIPTION:    2,
+    CONSENT_FORM:    3,
+    IMAGING:         4,
+  };
+
+  static RECORD_TYPE_NAMES = ["LAB_RESULT", "DIAGNOSIS", "PRESCRIPTION", "CONSENT_FORM", "IMAGING"];
+
+  /**
+   * Store a medical record hash on-chain.
+   * Called by T3.1 ingestion pipeline via this API.
+   * @param {number} recordType — use BlockchainService.RECORD_TYPES
+   */
+  async storeHash(datasetId, hashHex, metadataCID = "", recordType = 0) {
     this._ensureConnected();
 
-    // Convert hex string to bytes32
     const hashBytes32 = this._toBytes32(hashHex);
 
-    logger.info(`Storing hash for dataset: ${datasetId}`);
+    logger.info(`Storing hash for dataset: ${datasetId} (type: ${BlockchainService.RECORD_TYPE_NAMES[recordType]})`);
     logger.debug(`  Hash: ${hashHex}`);
     logger.debug(`  CID:  ${metadataCID || "(none)"}`);
 
@@ -138,6 +152,7 @@ class BlockchainService {
       datasetId,
       hashBytes32,
       metadataCID,
+      recordType,
       {
         gasPrice: 0,
         gasLimit: config.blockchain.gasLimit,
@@ -191,7 +206,7 @@ class BlockchainService {
   async getHash(datasetId) {
     this._ensureConnected();
 
-    const [datasetHash, timestamp, submitter, metadataCID] =
+    const [datasetHash, timestamp, submitter, metadataCID, recordType] =
       await this.contract.getHash(datasetId);
 
     return {
@@ -201,6 +216,8 @@ class BlockchainService {
       timestampISO: new Date(Number(timestamp) * 1000).toISOString(),
       submitter,
       metadataCID,
+      recordType: Number(recordType),
+      recordTypeName: BlockchainService.RECORD_TYPE_NAMES[Number(recordType)] ?? "UNKNOWN",
     };
   }
 
@@ -276,6 +293,23 @@ class BlockchainService {
   }
 
   /**
+   * Audit summary: record counts per type. Requires AUDITOR_ROLE on-chain.
+   */
+  async getAuditSummary() {
+    this._ensureConnected();
+    const [labResults, diagnoses, prescriptions, consentForms, imagingRecords, total] =
+      await this.contract.getAuditSummary();
+    return {
+      labResults:      Number(labResults),
+      diagnoses:       Number(diagnoses),
+      prescriptions:   Number(prescriptions),
+      consentForms:    Number(consentForms),
+      imagingRecords:  Number(imagingRecords),
+      total:           Number(total),
+    };
+  }
+
+  /**
    * Check if a dataset exists on-chain.
    */
   async datasetExists(datasetId) {
@@ -316,6 +350,138 @@ class BlockchainService {
         error: error.message,
       };
     }
+  }
+
+  // ── Per-user wallet helpers ────────────────────────────────────
+
+  /**
+   * Return a contract instance connected to a specific user wallet.
+   * Used so each user's on-chain transactions are signed by their own address.
+   */
+  getContractAs(privateKey) {
+    this._ensureConnected();
+    const wallet = new ethers.Wallet(privateKey, this.provider);
+    return this.contract.connect(wallet);
+  }
+
+  /**
+   * Grant an on-chain role to a wallet address.
+   * Called by the admin route when a user's role is assigned.
+   * Uses the deployer (admin) wallet which holds DEFAULT_ADMIN_ROLE.
+   *
+   * @param {string} roleKey — "nurse" | "doctor" | "pharmacist" | "consent_manager" | "auditor"
+   * @param {string} walletAddress — user's wallet address
+   */
+  async grantUserRole(roleKey, walletAddress) {
+    this._ensureConnected();
+
+    const ROLE_MAP = {
+      nurse:           this.contract.INGESTION_ROLE,
+      doctor:          this.contract.VALIDATOR_ROLE,
+      pharmacist:      this.contract.PHARMACIST_ROLE,
+      consent_manager: this.contract.CONSENT_MANAGER_ROLE,
+      auditor:         this.contract.AUDITOR_ROLE,
+    };
+
+    const roleFn = ROLE_MAP[roleKey];
+    if (!roleFn) throw new Error(`Unknown role: ${roleKey}`);
+
+    const roleHash = await roleFn.call(this.contract);
+    const tx = await this.contract.grantRole(roleHash, walletAddress, {
+      gasPrice: 0,
+      gasLimit: config.blockchain.gasLimit,
+    });
+    const receipt = await tx.wait();
+    logger.info(`Granted ${roleKey} to ${walletAddress} in block ${receipt.blockNumber}`);
+    return { transactionHash: receipt.hash, blockNumber: receipt.blockNumber };
+  }
+
+  /**
+   * Store hash using a specific user's wallet (not the deployer).
+   */
+  async storeHashAs(privateKey, datasetId, hashHex, metadataCID = "", recordType = 0) {
+    this._ensureConnected();
+    const contractAs = this.getContractAs(privateKey);
+    const hashBytes32 = this._toBytes32(hashHex);
+
+    logger.info(`Storing hash for dataset: ${datasetId} (type: ${BlockchainService.RECORD_TYPE_NAMES[recordType]})`);
+
+    const tx = await contractAs.storeHash(datasetId, hashBytes32, metadataCID, recordType, {
+      gasPrice: 0,
+      gasLimit: config.blockchain.gasLimit,
+    });
+    const receipt = await tx.wait();
+    return {
+      transactionHash: receipt.hash,
+      blockNumber:     receipt.blockNumber,
+      gasUsed:         receipt.gasUsed.toString(),
+      status:          receipt.status === 1 ? "confirmed" : "failed",
+    };
+  }
+
+  /**
+   * Update hash using a specific user's wallet.
+   */
+  async updateHashAs(privateKey, datasetId, newHashHex, metadataCID = "") {
+    this._ensureConnected();
+    const contractAs = this.getContractAs(privateKey);
+    const hashBytes32 = this._toBytes32(newHashHex);
+
+    const tx = await contractAs.updateHash(datasetId, hashBytes32, metadataCID, {
+      gasPrice: 0,
+      gasLimit: config.blockchain.gasLimit,
+    });
+    const receipt = await tx.wait();
+    return {
+      transactionHash: receipt.hash,
+      blockNumber:     receipt.blockNumber,
+      status:          receipt.status === 1 ? "confirmed" : "failed",
+    };
+  }
+
+  /**
+   * Validate hash using a specific user's wallet (doctor role).
+   */
+  async validateHashAs(privateKey, datasetId, hashHex) {
+    this._ensureConnected();
+    const contractAs = this.getContractAs(privateKey);
+    const hashBytes32 = this._toBytes32(hashHex);
+
+    const tx = await contractAs.validateHash(datasetId, hashBytes32, {
+      gasPrice: 0,
+      gasLimit: config.blockchain.gasLimit,
+    });
+    const receipt = await tx.wait();
+
+    const event = receipt.logs
+      .map(log => { try { return this.contract.interface.parseLog(log); } catch { return null; } })
+      .find(e => e?.name === "IntegrityChecked");
+
+    return {
+      datasetId,
+      isValid:         event ? event.args.isValid : null,
+      recordTypeName:  event ? BlockchainService.RECORD_TYPE_NAMES[Number(event.args.recordType)] : null,
+      transactionHash: receipt.hash,
+      blockNumber:     receipt.blockNumber,
+    };
+  }
+
+  /**
+   * Fetch audit summary using a specific user's wallet (auditor role).
+   */
+  async getAuditSummaryAs(privateKey) {
+    this._ensureConnected();
+    const contractAs = this.getContractAs(privateKey);
+    const [labResults, diagnoses, prescriptions, consentForms, imagingRecords, total] =
+      await contractAs.getAuditSummary();
+    return {
+      labResults:      Number(labResults),
+      diagnoses:       Number(diagnoses),
+      prescriptions:   Number(prescriptions),
+      consentForms:    Number(consentForms),
+      imagingRecords:  Number(imagingRecords),
+      total:           Number(total),
+    };
   }
 
   // ── Helpers ──

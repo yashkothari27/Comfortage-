@@ -7,7 +7,9 @@ const path = require("path");
 const config = require("./config");
 const logger = require("./logger");
 const { authenticateToken } = require("./middleware/auth");
-const hashRoutes = require("./routes/hashRoutes");
+const hashRoutes  = require("./routes/hashRoutes");
+const authRoutes  = require("./routes/authRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 const blockchainService = require("./services/blockchainService");
 const swaggerSpec = require("./swagger");
 
@@ -139,8 +141,12 @@ app.get("/health/debug", (req, res) => {
   });
 });
 
-// ── API Routes (auth required) ──
-app.use("/api/v1/hash", authenticateToken, hashRoutes);
+// ── Auth routes (register + login = public; /me = protected inline) ──
+app.use("/api/v1/auth", authRoutes);
+
+// ── Protected routes ──
+app.use("/api/v1/hash",  authenticateToken, hashRoutes);
+app.use("/api/v1/admin", authenticateToken, adminRoutes);
 
 // ── 404 ──
 app.use((req, res) => {
