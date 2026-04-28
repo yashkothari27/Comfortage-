@@ -3,7 +3,11 @@ const path = require("path");
 const fs = require("fs");
 const config = require("../config");
 
-const dbPath = path.resolve(config.dbPath);
+// Vercel and other read-only serverless environments only allow writes to /tmp
+const resolvedPath = path.resolve(config.dbPath);
+const dbPath = process.env.VERCEL
+  ? path.join("/tmp", path.basename(resolvedPath))
+  : resolvedPath;
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
 const db = new Database(dbPath);
