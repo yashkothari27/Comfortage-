@@ -12,133 +12,7 @@ const swaggerSpec = {
     title: 'COMFORTage — Healthcare Data Integrity API',
     version: '2.0.0',
     'x-logo': { url: '/comfortage-logo.svg', altText: 'COMFORTage Logo' },
-    description: `
-# COMFORTage T3.3 — Blockchain Data Integrity Service
-
-**Network:** Reltime Mainnet · PoA · Chain ID 32323 · Zero gas fees
-**Contract:** \`0xb032Fca326E02254d50509f35F8D6fd4cccDB3B0\`
-
----
-
-## Why Proof of Authority (PoA) in Healthcare?
-
-| Benefit | Detail |
-|---------|--------|
-| **Scalability & Speed** | Faster transactions with high throughput — critical for real-time medical data management |
-| **Energy Efficiency** | No resource-intensive mining (unlike PoW) — sustainable for large-scale health infrastructure |
-| **Trusted Security** | Pre-approved, identified validators (hospitals, regulators) ensure integrity; bad actors can be identified and removed |
-
----
-
-## What Gets Stored On-Chain?
-
-**Nothing personal.** Only the cryptographic fingerprint (SHA-256 hash) of the record is stored.
-
-| What You Have (Off-Chain) | What Blockchain Stores |
-|---------------------------|------------------------|
-| CBC blood panel PDF | \`0x3c59dc04…\` (64-char hash) |
-| Metformin prescription | \`0xa1b2c3d4…\` (64-char hash) |
-| Signed consent form | \`0xf9e8d7c6…\` (64-char hash) |
-| Chest X-ray DICOM | \`0x11223344…\` (64-char hash) |
-
-Even if the entire blockchain were compromised, an attacker would only see strings of random characters — **zero readable medical information**.
-
----
-
-## Record Types
-
-| Type | Code | Who Can Submit | Real-World Example |
-|------|------|----------------|-------------------|
-| Lab Result | \`LAB_RESULT\` | Nurse | CBC blood panel, HbA1c, CMP |
-| Diagnosis | \`DIAGNOSIS\` | Nurse | ICD-10 coded clinical diagnosis |
-| Prescription | \`PRESCRIPTION\` | Pharmacist | Metformin 500mg BID × 60 |
-| Consent Form | \`CONSENT_FORM\` | Consent Manager | Study participation consent |
-| Imaging | \`IMAGING\` | Nurse | Chest X-ray, MRI, CT scan |
-
----
-
-## How the System Works
-
-\`\`\`
-1. TRUTH MACHINE — Version tracking
-   Doctor updates treatment plan → new hash stored → old hash preserved in history
-   Anyone can compare file against on-chain hash — one changed character = mismatch = TAMPERED
-
-2. ACCOUNTABILITY — Role-based audit trail
-   Nurse uploads lab result → on-chain record: who, when, what type
-   Doctor validates → on-chain IntegrityChecked event: validator address + result
-   Auditor reads summary → compliance dashboard, no patient data exposed
-
-3. PATIENT PORTABILITY — Data is yours
-   Records live off-chain (your hospital system, secure app, cloud)
-   Blockchain holds the "receipt" — any new hospital can verify authenticity instantly
-\`\`\`
-
----
-
-## Authentication — Email & Password
-
-Users **never interact with blockchain wallets directly**. The backend manages wallets transparently.
-
-\`\`\`
-Register  →  backend generates wallet  →  private key encrypted (AES-256-GCM) in DB
-Login     →  JWT returned with role
-API call  →  backend decrypts key  →  signs on-chain tx using your wallet
-\`\`\`
-
-### Step 1 — Login to get your token
-
-\`\`\`bash
-curl -X POST /api/v1/auth/login \\
-  -H "Content-Type: application/json" \\
-  -d '{"email":"sara.johnson@comfortage.health","password":"Nurse@Sara2024!"}'
-\`\`\`
-
-### Step 2 — Use the token
-
-\`\`\`
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-\`\`\`
-
----
-
-## 🧪 Test Accounts (Ready to Use)
-
-Click **Authorize** (top right), then login with any account below to get a token.
-
-| Role | Email | Password | Can Do |
-|------|-------|----------|--------|
-| **Admin** | admin@comfortage.health | Admin@Comfortage2024! | Everything — assign roles, manage users |
-| **Nurse 1** | sara.johnson@comfortage.health | Nurse@Sara2024! | Store LAB_RESULT, DIAGNOSIS, IMAGING |
-| **Nurse 2** | miguel.torres@comfortage.health | Nurse@Miguel2024! | Store LAB_RESULT, DIAGNOSIS, IMAGING |
-| **Doctor 1** | dr.emily.chen@comfortage.health | Doctor@Emily2024! | Validate any record type (on-chain audit) |
-| **Doctor 2** | dr.james.patel@comfortage.health | Doctor@James2024! | Validate any record type (on-chain audit) |
-| **Pharmacist 1** | anna.schmidt@comfortage.health | Pharma@Anna2024! | Store PRESCRIPTION only |
-| **Pharmacist 2** | lucas.martin@comfortage.health | Pharma@Lucas2024! | Store PRESCRIPTION only |
-| **Consent Mgr 1** | sofia.russo@comfortage.health | Consent@Sofia2024! | Store CONSENT_FORM only |
-| **Consent Mgr 2** | alex.nguyen@comfortage.health | Consent@Alex2024! | Store CONSENT_FORM only |
-| **Auditor 1** | claire.dubois@comfortage.health | Audit@Claire2024! | Read compliance audit summary |
-| **Auditor 2** | peter.kowalski@comfortage.health | Audit@Peter2024! | Read compliance audit summary |
-
----
-
-## 📋 Pre-Seeded Records (Try These in GET /hash/{datasetId})
-
-These records are already stored on-chain from the test seed:
-
-| Dataset ID | Type | Patient | Submitted By |
-|-----------|------|---------|--------------|
-| \`LAB-P10042-CBC-20240318\` | LAB_RESULT | P10042 | Sara Johnson (Nurse) |
-| \`LAB-P10042-CMP-20240318\` | LAB_RESULT | P10042 | Sara Johnson (Nurse) |
-| \`LAB-P10099-HBA1C-20240320\` | LAB_RESULT | P10099 | Miguel Torres (Nurse) |
-| \`IMG-P10099-CXR-20240320\` | IMAGING | P10099 | Miguel Torres (Nurse) |
-| \`DX-P10042-T2DM-HTN-20240318\` | DIAGNOSIS | P10042 | Sara Johnson (Nurse) |
-| \`RX-P10042-MET-20240318\` | PRESCRIPTION | P10042 | Anna Schmidt (Pharmacist) |
-| \`RX-P10042-AML-20240318\` | PRESCRIPTION | P10042 | Anna Schmidt (Pharmacist) |
-| \`RX-P10099-INS-20240320\` | PRESCRIPTION | P10099 | Lucas Martin (Pharmacist) |
-| \`CONSENT-P10042-STUDY-20240315\` | CONSENT_FORM | P10042 | Sofia Russo (Consent Mgr) |
-| \`CONSENT-P10099-STUDY-20240316\` | CONSENT_FORM | P10099 | Alex Nguyen (Consent Mgr) |
-    `,
+    description: 'Healthcare data integrity API — SHA-256 record hashes stored on Reltime Mainnet (PoA, Chain ID 32323). See [Testing Guide](/guide) for test accounts, pre-seeded records, and workflow examples.',
     contact: { name: 'COMFORTage Team' },
     license: { name: 'MIT' },
   },
@@ -152,89 +26,12 @@ These records are already stored on-chain from the test seed:
   // TAGS
   // ═══════════════════════════════════════════════════════════════
   tags: [
-    {
-      name: 'Account',
-      description: `
-**Register, login, and view your profile.**
-
-Users never interact with blockchain wallets. The backend auto-provisions an Ethereum-compatible wallet on registration and manages signing transparently.
-
-**Workflow:**
-1. \`POST /auth/register\` — creates account + blockchain wallet
-2. \`POST /auth/login\` — returns JWT token
-3. Use token in \`Authorization: Bearer <token>\` header for all other endpoints
-      `,
-    },
-    {
-      name: 'Admin',
-      description: `
-**Admin-only: manage users and assign on-chain roles.**
-
-When a role is assigned, two things happen simultaneously:
-1. Database role is updated
-2. \`contract.grantRole(roleHash, walletAddress)\` is called on Reltime Mainnet
-
-**Role → On-Chain Mapping:**
-| Role | Solidity Constant | Record Types |
-|------|-------------------|--------------|
-| nurse | INGESTION_ROLE | LAB_RESULT, DIAGNOSIS, IMAGING |
-| doctor | VALIDATOR_ROLE | validate all types |
-| pharmacist | PHARMACIST_ROLE | PRESCRIPTION |
-| consent_manager | CONSENT_MANAGER_ROLE | CONSENT_FORM |
-| auditor | AUDITOR_ROLE | read audit summary |
-      `,
-    },
-    {
-      name: 'Records',
-      description: `
-**Store and retrieve medical record hashes on Reltime blockchain.**
-
-The hash is a SHA-256 fingerprint of the actual record (stored off-chain). Only the fingerprint lives on-chain — zero patient data.
-
-**How to generate a hash (examples):**
-\`\`\`bash
-# Node.js
-const crypto = require('crypto');
-const hash = '0x' + crypto.createHash('sha256').update(fileBuffer).digest('hex');
-
-# Python
-import hashlib
-hash = '0x' + hashlib.sha256(open('record.pdf','rb').read()).hexdigest()
-
-# Linux/Mac CLI
-sha256sum record.pdf
-\`\`\`
-      `,
-    },
-    {
-      name: 'Validation',
-      description: `
-**Verify that off-chain data has not been altered.**
-
-Two modes:
-
-| Endpoint | On-Chain Tx | Audit Event | Use When |
-|----------|:-----------:|:-----------:|----------|
-| \`POST /hash/validate\` | ✅ Yes | ✅ Recorded | Official doctor sign-off, compliance |
-| \`GET /hash/check/{id}/{hash}\` | ❌ No | ❌ None | Quick check, batch processing, dev testing |
-
-The \`IntegrityChecked\` on-chain event contains: validator wallet address, timestamp, record type, and match result — creating a permanent, unforgeable audit trail.
-      `,
-    },
-    {
-      name: 'Audit',
-      description: `
-**Compliance dashboard — auditor role only.**
-
-Returns a breakdown of all records stored on-chain by type. No patient data is exposed — only counts and totals.
-
-This view is designed for compliance officers, hospital administrators, and regulators to confirm that data ingestion is happening as expected across all record categories.
-      `,
-    },
-    {
-      name: 'Health',
-      description: 'Service and blockchain connection status. No authentication required.',
-    },
+    { name: 'Account',    description: 'Register, login, and view your profile.' },
+    { name: 'Admin',      description: 'Manage users and assign roles. Admin token required.' },
+    { name: 'Records',    description: 'Store and retrieve medical record hashes on-chain.' },
+    { name: 'Validation', description: 'Verify record integrity. Doctor token required.' },
+    { name: 'Audit',      description: 'Compliance summary by record type. Auditor token required.' },
+    { name: 'Health',     description: 'Service and blockchain connection status. No auth required.' },
   ],
 
   // ═══════════════════════════════════════════════════════════════
@@ -246,17 +43,7 @@ This view is designed for compliance officers, hospital administrators, and regu
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: `
-Login first to get your token:
-
-\`\`\`bash
-curl -X POST /api/v1/auth/login \\
-  -H "Content-Type: application/json" \\
-  -d '{"email":"sara.johnson@comfortage.health","password":"Nurse@Sara2024!"}'
-\`\`\`
-
-Then paste the \`token\` value here.
-        `,
+        description: 'Login via POST /api/v1/auth/login, then paste the returned token here.',
       },
     },
 

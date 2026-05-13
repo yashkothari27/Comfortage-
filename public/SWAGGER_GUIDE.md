@@ -1,131 +1,239 @@
-# COMFORTage API — Swagger Testing Guide
+# COMFORTage T3.3 — API Reference & Testing Guide
 
-**Swagger UI:** `http://localhost:3001/docs` (local) · `https://comfortage-git-main-yashvijay2711-2103s-projects.vercel.app/docs` (Vercel)
-
----
-
-## Quick Start (3 steps)
-
-### Step 1 — Open Swagger and pick a server
-Go to `/docs`. At the top of the page there is a **Servers** dropdown.
-- If you are running locally → select `http://localhost:3001`
-- If you are on Vercel → the current Vercel URL is selected automatically
-
-### Step 2 — Login and copy your token
-1. Expand **Auth → POST /api/v1/auth/login**
-2. Click **Try it out**
-3. Click the **Examples** dropdown and pick any test user (e.g. "🩺 Login as Nurse")
-4. Click **Execute**
-5. From the response body, copy the value of `"token"` (the long string starting with `eyJ…`)
-
-### Step 3 — Authorize
-1. Click the **Authorize 🔓** button at the top-right of the page
-2. In the **bearerAuth** field, paste your token (without any prefix — just the token itself)
-3. Click **Authorize** → **Close**
-4. All protected endpoints now work for your session
+**Swagger UI:** `http://localhost:3001/docs` (local) · `/docs` on your Vercel deployment
 
 ---
 
-## Test Users
+## About This System
+
+**Network:** Reltime Mainnet · PoA · Chain ID 32323 · Zero gas fees
+**Contract:** `0xb032Fca326E02254d50509f35F8D6fd4cccDB3B0`
+
+### Why Proof of Authority (PoA) in Healthcare?
+
+| Benefit | Detail |
+|---------|--------|
+| **Scalability & Speed** | Faster transactions with high throughput — critical for real-time medical data management |
+| **Energy Efficiency** | No resource-intensive mining (unlike PoW) — sustainable for large-scale health infrastructure |
+| **Trusted Security** | Pre-approved, identified validators (hospitals, regulators) ensure integrity; bad actors can be identified and removed |
+
+### What Gets Stored On-Chain?
+
+Nothing personal. Only the cryptographic fingerprint (SHA-256 hash) of the record is stored.
+
+| What You Have (Off-Chain) | What Blockchain Stores |
+|---------------------------|------------------------|
+| CBC blood panel PDF | `0x3c59dc04…` (64-char hash) |
+| Metformin prescription | `0xa1b2c3d4…` (64-char hash) |
+| Signed consent form | `0xf9e8d7c6…` (64-char hash) |
+| Chest X-ray DICOM | `0x11223344…` (64-char hash) |
+
+Even if the entire blockchain were compromised, an attacker would only see strings of random characters — **zero readable medical information**.
+
+### Record Types
+
+| Type | Code | Who Can Submit | Real-World Example |
+|------|------|----------------|--------------------|
+| Lab Result | `LAB_RESULT` | Nurse | CBC blood panel, HbA1c, CMP |
+| Diagnosis | `DIAGNOSIS` | Nurse | ICD-10 coded clinical diagnosis |
+| Prescription | `PRESCRIPTION` | Pharmacist | Metformin 500mg BID × 60 |
+| Consent Form | `CONSENT_FORM` | Consent Manager | Study participation consent |
+| Imaging | `IMAGING` | Nurse | Chest X-ray, MRI, CT scan |
+
+### How the System Works
+
+```
+1. TRUTH MACHINE — Version tracking
+   Nurse uploads lab result → hash stored on-chain
+   Record updated → new hash stored → old hash preserved in history
+   Anyone can compare file against on-chain hash — one changed character = mismatch = TAMPERED
+
+2. ACCOUNTABILITY — Role-based audit trail
+   Nurse uploads → on-chain record: who, when, what type
+   Doctor validates → on-chain IntegrityChecked event: validator address + result
+   Auditor reads summary → compliance dashboard, no patient data exposed
+
+3. PATIENT PORTABILITY — Data is yours
+   Records live off-chain (hospital system, secure app, cloud)
+   Blockchain holds the "receipt" — any new hospital can verify authenticity instantly
+```
+
+### How Authentication Works
+
+Users never interact with blockchain wallets directly. The backend manages wallets transparently.
+
+```
+Register  →  backend generates wallet  →  private key encrypted (AES-256-GCM) in DB
+Login     →  JWT returned with role
+API call  →  backend decrypts key  →  signs on-chain tx using your wallet
+```
+
+---
+
+## Quick Start (3 Steps)
+
+### Step 1 — Login to get your token
+
+In Swagger: expand **Account → POST /api/v1/auth/login**, click **Try it out**, pick an example from the dropdown, click **Execute**, and copy the `token` value from the response.
+
+Or via curl:
+```bash
+curl -X POST http://localhost:3001/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"sara.johnson@comfortage.health","password":"Nurse@Sara2024!"}'
+```
+
+### Step 2 — Authorize in Swagger
+
+Click the **Authorize 🔓** button (top-right). Paste the token (no prefix, just the raw `eyJ…` string). Click **Authorize → Close**.
+
+### Step 3 — Call any endpoint
+
+All protected endpoints now work for your session. Token expires after 24 hours — just login again.
+
+---
+
+## Test Accounts
 
 | Role | Email | Password | What they can do |
 |------|-------|----------|-----------------|
-| **Nurse** | `sara.johnson@comfortage.health` | `Nurse@Sara2024!` | Store & amend hashes (LAB, IMAGING, DIAGNOSIS) |
-| **Doctor** | `dr.emily.chen@comfortage.health` | `Doctor@Emily2024!` | Validate hashes on-chain |
-| **Pharmacist** | `anna.schmidt@comfortage.health` | `Pharma@Anna2024!` | Store & amend PRESCRIPTION hashes |
-| **Consent Officer** | `sofia.russo@comfortage.health` | `Consent@Sofia2024!` | Store CONSENT_FORM hashes |
-| **Auditor** | `claire.dubois@comfortage.health` | `Audit@Claire2024!` | Read audit summary (read-only) |
 | **Admin** | `admin@comfortage.health` | `Admin@Comfortage2024!` | Manage users, assign roles |
+| **Nurse 1** | `sara.johnson@comfortage.health` | `Nurse@Sara2024!` | Store LAB_RESULT, DIAGNOSIS, IMAGING |
+| **Nurse 2** | `miguel.torres@comfortage.health` | `Nurse@Miguel2024!` | Store LAB_RESULT, DIAGNOSIS, IMAGING |
+| **Doctor 1** | `dr.emily.chen@comfortage.health` | `Doctor@Emily2024!` | Validate any record type (on-chain audit) |
+| **Doctor 2** | `dr.james.patel@comfortage.health` | `Doctor@James2024!` | Validate any record type (on-chain audit) |
+| **Pharmacist 1** | `anna.schmidt@comfortage.health` | `Pharma@Anna2024!` | Store PRESCRIPTION only |
+| **Pharmacist 2** | `lucas.martin@comfortage.health` | `Pharma@Lucas2024!` | Store PRESCRIPTION only |
+| **Consent Mgr 1** | `sofia.russo@comfortage.health` | `Consent@Sofia2024!` | Store CONSENT_FORM only |
+| **Consent Mgr 2** | `alex.nguyen@comfortage.health` | `Consent@Alex2024!` | Store CONSENT_FORM only |
+| **Auditor 1** | `claire.dubois@comfortage.health` | `Audit@Claire2024!` | Read compliance audit summary |
+| **Auditor 2** | `peter.kowalski@comfortage.health` | `Audit@Peter2024!` | Read compliance audit summary |
 
-> **Note:** Each role maps to an on-chain permission. If you try an action your role doesn't have, the blockchain will revert the transaction with a 403 or 500 error.
-
----
-
-## All Endpoints — What They Do and How to Test
-
-### Public (no token needed)
-
-#### `GET /health`
-Checks if the server and blockchain are reachable.
-- Click **Try it out → Execute**
-- Expected: `{ "status": "healthy" }`
-
-#### `POST /api/v1/auth/register`
-Creates a new account. Role starts as `pending` until an admin assigns one.
-- Use the **"Register a nurse"** example or fill in your own email/password/fullName
-- Expected: `201` with a JWT token
-
-#### `POST /api/v1/auth/login`
-Returns a JWT token. **This is always your first step.**
-- Use the **Examples dropdown** to pick a pre-built test user
-- Copy the `token` from the response
-- Paste it into **Authorize 🔓** at the top of the page
+> Each role maps to an on-chain permission. Using an action your role doesn't have will return a 500 transaction revert.
 
 ---
 
-### Auth (token required)
+## Pre-Seeded Records
 
-#### `GET /api/v1/auth/me`
-Returns the profile of whichever user is currently authorized.
-- Authorize first, then Execute
-- Expected: your user's email, role, and wallet address
+These dataset IDs are already stored on-chain. Use them directly in `GET /hash/{datasetId}`.
 
----
-
-### Hash / Blockchain (token required)
-
-#### `POST /api/v1/hash` — Store a record hash
-Writes a SHA-256 hash to the blockchain. **Requires nurse, pharmacist, or consent_officer token.**
-- Use the **Examples dropdown** (e.g. "🩸 Store CBC blood panel")
-- Expected: `{ "success": true, "data": { "transactionHash": "0x…", "blockNumber": … } }`
-- **Common error:** 500 with "transaction execution reverted" → your wallet doesn't have the right on-chain role. Switch to the correct user.
-
-#### `GET /api/v1/hash/{datasetId}` — Retrieve a record
-Reads a stored record by its datasetId.
-- Fill in a `datasetId` you previously stored (e.g. `LAB-TEST-001`)
-- Expected: hash, timestamp, submitter address, recordTypeName
-
-#### `PUT /api/v1/hash/{datasetId}` — Amend a record
-Stores a new version of a record (original is preserved on-chain).
-- Fill in the `datasetId` path parameter
-- Provide a new `hash` value in the body
-- Expected: new transaction hash, version incremented
-
-#### `GET /api/v1/hash/history/{datasetId}` — Version history
-Lists every version ever stored for a datasetId.
-- Expected: `{ "data": { "totalVersions": 2, "versions": […] } }`
-
-#### `POST /api/v1/hash/validate` — Validate integrity (on-chain event)
-Checks if a hash matches what's on-chain AND writes an audit event to the blockchain. **Requires doctor token.**
-- Use **"✅ Validate a real record"** example for `isValid: true`
-- Use **"❌ Simulate tampered data"** example for `isValid: false`
-- Expected: `{ "data": { "isValid": true/false, "transactionHash": "0x…" } }`
-
-#### `GET /api/v1/hash/check/{datasetId}/{hash}` — Quick integrity check
-Same as validate but **read-only** — no blockchain transaction, no gas, instant.
-- Fill both path parameters
-- Expected: `{ "data": { "isValid": true/false } }` with no `transactionHash`
-
-#### `GET /api/v1/hash/audit/summary` — Compliance audit summary
-Returns a count of all records by type. **Requires auditor token.**
-- Expected: `{ "data": { "labResults": 5, "prescriptions": 4, … "total": 13 } }`
+| Dataset ID | Type | Patient | Submitted By |
+|-----------|------|---------|--------------|
+| `LAB-P10042-CBC-20240318` | LAB_RESULT | P10042 | Sara Johnson (Nurse) |
+| `LAB-P10042-CMP-20240318` | LAB_RESULT | P10042 | Sara Johnson (Nurse) |
+| `LAB-P10099-HBA1C-20240320` | LAB_RESULT | P10099 | Miguel Torres (Nurse) |
+| `IMG-P10099-CXR-20240320` | IMAGING | P10099 | Miguel Torres (Nurse) |
+| `DX-P10042-T2DM-HTN-20240318` | DIAGNOSIS | P10042 | Sara Johnson (Nurse) |
+| `RX-P10042-MET-20240318` | PRESCRIPTION | P10042 | Anna Schmidt (Pharmacist) |
+| `RX-P10042-AML-20240318` | PRESCRIPTION | P10042 | Anna Schmidt (Pharmacist) |
+| `RX-P10099-INS-20240320` | PRESCRIPTION | P10099 | Lucas Martin (Pharmacist) |
+| `CONSENT-P10042-STUDY-20240315` | CONSENT_FORM | P10042 | Sofia Russo (Consent Mgr) |
+| `CONSENT-P10099-STUDY-20240316` | CONSENT_FORM | P10099 | Alex Nguyen (Consent Mgr) |
 
 ---
 
-### Admin (admin token required)
+## Role → On-Chain Permission Mapping
 
-#### `GET /api/v1/admin/users` — List all users
-Returns every registered user with their role and wallet address.
+When an admin assigns a role, the backend simultaneously updates the DB and calls `contract.grantRole()` on Reltime Mainnet.
 
-#### `GET /api/v1/admin/users/{id}` — Get single user
-Returns one user by their numeric database ID.
+| Role | Solidity Constant | Permitted Actions |
+|------|-------------------|-------------------|
+| `nurse` | `INGESTION_ROLE` | Store LAB_RESULT, DIAGNOSIS, IMAGING |
+| `doctor` | `VALIDATOR_ROLE` | Validate all record types |
+| `pharmacist` | `PHARMACIST_ROLE` | Store PRESCRIPTION |
+| `consent_manager` | `CONSENT_MANAGER_ROLE` | Store CONSENT_FORM |
+| `auditor` | `AUDITOR_ROLE` | Read audit summary |
+| `admin` | — | All of the above + user management |
 
-#### `PUT /api/v1/admin/users/{id}/role` — Assign a role
-Changes a user's role. Use the **Examples dropdown** to pick nurse/doctor/pharmacist etc.
-- **Important:** This only updates the database role. On-chain role grants are handled separately via the smart contract's `grantRole` function.
+---
 
-#### `DELETE /api/v1/admin/users/{id}` — Delete a user
-Permanently removes a user from the database.
+## Endpoint Reference
+
+### Public
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Service + blockchain status |
+| POST | `/api/v1/auth/register` | Create account (role starts as `pending`) |
+| POST | `/api/v1/auth/login` | Get JWT token |
+
+### Auth (any valid token)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/auth/me` | Your profile and wallet address |
+
+### Records (nurse / pharmacist / consent_officer)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/hash` | Store a hash on-chain |
+| GET | `/api/v1/hash/{datasetId}` | Retrieve a stored record |
+| PUT | `/api/v1/hash/{datasetId}` | Amend a record (preserves history) |
+| GET | `/api/v1/hash/history/{datasetId}` | Full version history |
+
+### Validation (doctor)
+
+| Method | Path | On-Chain Tx | Description |
+|--------|------|:-----------:|-------------|
+| POST | `/api/v1/hash/validate` | Yes | Validate + write audit event |
+| GET | `/api/v1/hash/check/{datasetId}/{hash}` | No | Quick read-only integrity check |
+
+### Audit (auditor)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/hash/audit/summary` | Record counts by type |
+
+### Admin
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/admin/users` | List all users |
+| GET | `/api/v1/admin/users/{id}` | Get single user |
+| PUT | `/api/v1/admin/users/{id}/role` | Assign a role |
+| DELETE | `/api/v1/admin/users/{id}` | Delete a user |
+
+---
+
+## Example Workflow: Store → Validate → Audit
+
+```
+1. Authorize as Nurse (Sara Johnson)
+2. POST /api/v1/hash
+      datasetId: "LAB-P10042-NEWCBC-20240401"
+      hash:      "0x3c59dc048e8850243be8079a5c74d079934b91d7321b8e09f8ce1fde91baa2ae"
+      recordType: "LAB_RESULT"
+      metadataCID: "QmLabCBCP10042Apr2024"
+   → confirmed on-chain, get transactionHash
+
+3. Authorize as Doctor (Dr. Emily Chen)
+4. POST /api/v1/hash/validate
+      datasetId: "LAB-P10042-NEWCBC-20240401"
+      hash:      "0x3c59dc048e8850243be8079a5c74d079934b91d7321b8e09f8ce1fde91baa2ae"
+   → isValid: true, IntegrityChecked event written on-chain
+
+5. Authorize as Auditor (Claire Dubois)
+6. GET /api/v1/hash/audit/summary
+   → { labResults: N, prescriptions: N, … total: N }
+```
+
+---
+
+## Generating a SHA-256 Hash
+
+```bash
+# Node.js
+const crypto = require('crypto');
+const hash = '0x' + crypto.createHash('sha256').update(fileBuffer).digest('hex');
+
+# Python
+import hashlib
+hash = '0x' + hashlib.sha256(open('record.pdf','rb').read()).hexdigest()
+
+# Linux / Mac terminal
+sha256sum record.pdf
+```
 
 ---
 
@@ -133,40 +241,19 @@ Permanently removes a user from the database.
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| `401 Invalid email or password` | User not in database | Run `npm run seed` to create test users |
-| `401 No token provided` | Forgot to authorize | Click **Authorize 🔓** and paste your token |
-| `403 Forbidden` | Your role can't do this action | Switch to the correct user (see role table above) |
-| `500 transaction execution reverted` | Wallet lacks on-chain role | Use a pre-seeded test user — their wallets have roles granted on-chain |
-| `Failed to fetch` in browser | Mixed HTTP/HTTPS or wrong server | Check the **Servers** dropdown matches where you're testing |
-| `404 Endpoint not found` | Wrong URL or method | Double-check you're using the right HTTP method (PUT vs POST) |
+| `401 Invalid email or password` | User not in database | Run `npm run seed` |
+| `401 No token` | Forgot to authorize | Click Authorize 🔓 and paste token |
+| `403 Forbidden` | Wrong role for this action | Switch to the correct test account |
+| `500 transaction execution reverted` | Wallet lacks on-chain role | Use a pre-seeded test account |
+| `Failed to fetch` in Swagger | Wrong server selected or mixed HTTP/HTTPS | Check the Servers dropdown at the top of Swagger UI |
 
 ---
 
-## Local Development Setup
+## Local Setup
 
 ```bash
-# 1. Install dependencies
-npm install
-
-# 2. Seed test users into the local database
-npm run seed
-
-# 3. Start the server on port 3001 (port 3000 may be taken by another app)
-PORT=3001 npm start
-
-# 4. Open Swagger
+npm install          # install dependencies
+npm run seed         # create test users in local DB
+PORT=3001 npm start  # start server (3000 may be taken by another app)
 open http://localhost:3001/docs
-```
-
----
-
-## Workflow Example: Store → Validate → Audit
-
-```
-1. Login as Nurse (Sara Johnson)           → copy token → Authorize
-2. POST /api/v1/hash                       → store LAB-P10042 → note datasetId
-3. Login as Doctor (Dr. Emily Chen)        → copy token → Authorize
-4. POST /api/v1/hash/validate              → validate LAB-P10042 → isValid: true
-5. Login as Auditor (Claire Dubois)        → copy token → Authorize
-6. GET /api/v1/hash/audit/summary          → see total record counts
 ```
