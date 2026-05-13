@@ -26,6 +26,9 @@ try {
   logger.warn("Could not load Postman collection file at startup", err.message);
 }
 
+// Trust reverse-proxy headers (Vercel, nginx) so rate limiter reads real client IP
+app.set("trust proxy", 1);
+
 // ── Security ──
 // Apply helmet globally but disable CSP — we set it manually per-route below
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -195,7 +198,7 @@ const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get().count;
 if (userCount === 0) {
   seedUsers(true)
     .then(() => logger.info("Test users auto-seeded (fresh database)"))
-    .catch((err) => logger.error("Auto-seed failed:", err.message));
+    .catch((err) => logger.error("Auto-seed failed:", err.message, err.stack));
 }
 
 blockchainService.initialize()
