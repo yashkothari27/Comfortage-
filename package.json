@@ -9,7 +9,8 @@
     "deploy": "node scripts/deploy.js",
     "verify-deploy": "node scripts/verify-deployment.js",
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "seed": "node scripts/seed-users.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
