@@ -107,10 +107,20 @@ app.get("/docs", (_req, res) => {
 </html>`);
 });
 
-// Swagger JSON endpoint
+// Swagger JSON endpoint — inject current host so Swagger UI calls the right server
 app.get("/openapi.json", (req, res) => {
+  const proto = req.headers["x-forwarded-proto"] || req.protocol;
+  const host  = req.headers["x-forwarded-host"]  || req.get("host");
+  const currentUrl = `${proto}://${host}`;
+  const spec = {
+    ...swaggerSpec,
+    servers: [
+      { url: currentUrl, description: "Current server" },
+      ...swaggerSpec.servers.filter(s => s.url !== currentUrl),
+    ],
+  };
   res.setHeader("Content-Type", "application/json");
-  res.send(swaggerSpec);
+  res.json(spec);
 });
 
 // ── Postman Collection download (no auth) ──
