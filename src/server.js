@@ -163,10 +163,21 @@ app.get("/health", async (req, res) => {
 
 // ── Diagnostic endpoint (no auth) - for debugging initialization ──
 app.get("/health/debug", (req, res) => {
+  const db = require("./db/database");
+  const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get().count;
+  const roles = db.prepare("SELECT role, COUNT(*) as n FROM users GROUP BY role").all();
   res.json({
     isConnected: blockchainService.isConnected,
     initError: blockchainService.initError,
     initLog: blockchainService.initLog,
+    userCount,
+    roles,
+    env: {
+      WALLET_ENCRYPTION_KEY: !!process.env.WALLET_ENCRYPTION_KEY,
+      JWT_SECRET:            !!process.env.JWT_SECRET,
+      CONTRACT_ADDRESS:      !!process.env.CONTRACT_ADDRESS,
+      RELTIME_RPC_URL:       !!process.env.RELTIME_RPC_URL,
+    },
     timestamp: new Date().toISOString(),
   });
 });
@@ -196,9 +207,12 @@ const { seedUsers } = require("../scripts/seed-users");
 // Auto-seed test users if DB is empty (Vercel /tmp resets on every cold start)
 const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get().count;
 if (userCount === 0) {
-  seedUsers(true)
-    .then(() => logger.info("Test users auto-seeded (fresh database)"))
-    .catch((err) => logger.error("Auto-seed failed:", err.message, err.stack));
+  try {
+    seedUsers(true);
+    logger.info("Test users auto-seeded (fresh database)");
+  } catch (err) {
+    logger.error("Auto-seed failed:", err.message, err.stack);
+  }
 }
 
 blockchainService.initialize()
