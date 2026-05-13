@@ -21,10 +21,10 @@ module.exports = {
     expiresIn: "24h",
   },
 
-  // CORS
+  // CORS — default to wildcard so Swagger UI works on any deployment URL
   corsOrigins: process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS.split(",")
-    : ["*"],
+    : "*",
 
   // Wallet encryption (AES-256-GCM) — used to encrypt user private keys at rest
   walletEncryptionKey: process.env.WALLET_ENCRYPTION_KEY,
