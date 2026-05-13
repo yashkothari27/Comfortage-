@@ -187,7 +187,17 @@ app.use((err, req, res, next) => {
 });
 
 // ── Initialization ──
-// Kick off blockchain init at module load; errors are logged but do not crash the process.
+const db = require("./db/database");
+const { seedUsers } = require("../scripts/seed-users");
+
+// Auto-seed test users if DB is empty (Vercel /tmp resets on every cold start)
+const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get().count;
+if (userCount === 0) {
+  seedUsers(true)
+    .then(() => logger.info("Test users auto-seeded (fresh database)"))
+    .catch((err) => logger.error("Auto-seed failed:", err.message));
+}
+
 blockchainService.initialize()
   .then(() => logger.info("Blockchain service initialized successfully"))
   .catch((error) => {

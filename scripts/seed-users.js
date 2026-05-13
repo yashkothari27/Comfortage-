@@ -32,20 +32,20 @@ const testUsers = [
   { email: "peter.kowalski@comfortage.health", password: "Audit@Peter2024!",      fullName: "Peter Kowalski",    role: "auditor",          privateKey: "0x7e877bb718e6942360ac0e6f0a19df75d2de475aa15ad98d5abc148d58bb1bf3" },
 ];
 
-(async () => {
+async function seedUsers(silent = false) {
   const upsert = db.prepare(`
     INSERT INTO users
       (email, password_hash, full_name, role, wallet_address, encrypted_private_key, wallet_iv, wallet_auth_tag)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(email) DO UPDATE SET
-      password_hash        = excluded.password_hash,
-      full_name            = excluded.full_name,
-      role                 = excluded.role,
-      wallet_address       = excluded.wallet_address,
+      password_hash         = excluded.password_hash,
+      full_name             = excluded.full_name,
+      role                  = excluded.role,
+      wallet_address        = excluded.wallet_address,
       encrypted_private_key = excluded.encrypted_private_key,
-      wallet_iv            = excluded.wallet_iv,
-      wallet_auth_tag      = excluded.wallet_auth_tag,
-      updated_at           = datetime('now')
+      wallet_iv             = excluded.wallet_iv,
+      wallet_auth_tag       = excluded.wallet_auth_tag,
+      updated_at            = datetime('now')
   `);
 
   for (const u of testUsers) {
@@ -54,9 +54,15 @@ const testUsers = [
     const address = new ethers.Wallet(pk).address;
     const { encrypted, iv, authTag } = encryptPrivateKey(pk);
     upsert.run(u.email, hash, u.fullName, u.role, address, encrypted, iv, authTag);
-    console.log(`✓ ${u.role.padEnd(16)} ${u.email}  →  ${address}`);
+    if (!silent) console.log(`✓ ${u.role.padEnd(16)} ${u.email}  →  ${address}`);
   }
 
-  console.log("\nDone. All test users seeded with pre-authorized wallets.");
-  process.exit(0);
-})();
+  if (!silent) console.log("\nDone. All test users seeded with pre-authorized wallets.");
+}
+
+module.exports = { seedUsers };
+
+// Run directly: node scripts/seed-users.js
+if (require.main === module) {
+  seedUsers().then(() => process.exit(0));
+}
