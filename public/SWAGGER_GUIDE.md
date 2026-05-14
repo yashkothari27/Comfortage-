@@ -40,6 +40,33 @@ Even if the entire blockchain were compromised, an attacker would only see strin
 | Consent Form | `CONSENT_FORM` | Consent Manager | Study participation consent |
 | Imaging | `IMAGING` | Nurse | Chest X-ray, MRI, CT scan |
 
+### Real-World Clinical Workflow
+
+```
+STEP 1 — Nurse uploads a lab test (PDF, Word, DICOM, etc.)
+  Nurse has a lab result file (e.g. "CBC_blood_panel.pdf")
+  → Compute SHA-256 hash of the file (see "Generating a SHA-256 Hash" below)
+  → POST /api/v1/hash  with recordType: LAB_RESULT
+  → Hash is stored on-chain; the actual file stays in your hospital system
+
+STEP 2 — Doctor reviews and writes a prescription
+  Doctor calls GET /api/v1/hash/{datasetId} to confirm the record exists
+  → POST /api/v1/hash/validate to certify it on-chain (IntegrityChecked audit event)
+  Pharmacist or Nurse then submits the prescription file:
+  → POST /api/v1/hash  with recordType: PRESCRIPTION
+
+STEP 3 — Pharmacist verifies the prescription
+  Pharmacist receives the physical prescription or file
+  → Compute SHA-256 hash of their copy of the file
+  → GET /api/v1/hash/check/{datasetId}/{hash}  (read-only, no gas)
+  → isValid: true  = file is unchanged, safe to dispense
+  → isValid: false = file was tampered — do NOT dispense
+```
+
+> **Important:** The API stores the cryptographic fingerprint (hash) of files, not the files themselves.
+> PDFs, Word docs, and images live in your existing hospital system or secure storage.
+> The blockchain acts as a tamper-proof receipt — anyone with the original file can verify it instantly.
+
 ### How the System Works
 
 ```

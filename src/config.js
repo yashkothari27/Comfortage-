@@ -7,10 +7,10 @@ module.exports = {
 
   // Reltime Blockchain
   blockchain: {
-    rpcUrl: process.env.RELTIME_RPC_URL || "https://mainnet.reltime.com/",
+    rpcUrl: (process.env.RELTIME_RPC_URL || "https://mainnet.reltime.com/").trim(),
     chainId: parseInt(process.env.RELTIME_CHAIN_ID) || 32323,
-    contractAddress: process.env.CONTRACT_ADDRESS,
-    privateKey: process.env.DEPLOYER_PRIVATE_KEY,
+    contractAddress: process.env.CONTRACT_ADDRESS?.trim(),
+    privateKey: process.env.DEPLOYER_PRIVATE_KEY?.trim(),
     gasPrice: 0,       // Reltime = zero gas fees
     gasLimit: 5000000,
   },

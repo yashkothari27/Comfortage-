@@ -12,9 +12,17 @@ class BlockchainService {
     this.isConnected = false;
     this.initError = null;
     this.initLog = [];
+    this._initPromise = null;
   }
 
-  async initialize() {
+  initialize() {
+    if (!this._initPromise) {
+      this._initPromise = this._doInitialize();
+    }
+    return this._initPromise;
+  }
+
+  async _doInitialize() {
     try {
       const msg = "Starting blockchain service initialization...";
       this.initLog.push(msg);
@@ -52,7 +60,7 @@ class BlockchainService {
       try {
         const networkPromise = this.provider.getNetwork();
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Network verification timeout after 15s")), 15000)
+          setTimeout(() => reject(new Error("Network verification timeout after 5s")), 5000)
         );
         const network = await Promise.race([networkPromise, timeoutPromise]);
         let msg5 = `Connected to Reltime Mainnet, Chain ID: ${network.chainId}`;
@@ -140,7 +148,7 @@ class BlockchainService {
    * @param {number} recordType — use BlockchainService.RECORD_TYPES
    */
   async storeHash(datasetId, hashHex, metadataCID = "", recordType = 0) {
-    this._ensureConnected();
+    await this._ensureConnected();
 
     const hashBytes32 = this._toBytes32(hashHex);
 
@@ -175,7 +183,7 @@ class BlockchainService {
    * Update an existing dataset hash on-chain.
    */
   async updateHash(datasetId, newHashHex, metadataCID = "") {
-    this._ensureConnected();
+    await this._ensureConnected();
 
     const hashBytes32 = this._toBytes32(newHashHex);
 
@@ -204,7 +212,7 @@ class BlockchainService {
    * Called by DataIntegrityValidator (T3.4).
    */
   async getHash(datasetId) {
-    this._ensureConnected();
+    await this._ensureConnected();
 
     const [datasetHash, timestamp, submitter, metadataCID, recordType] =
       await this.contract.getHash(datasetId);
@@ -226,7 +234,7 @@ class BlockchainService {
    * This calls the smart contract's validateHash which emits an audit event.
    */
   async validateHash(datasetId, hashHex) {
-    this._ensureConnected();
+    await this._ensureConnected();
 
     const hashBytes32 = this._toBytes32(hashHex);
 
@@ -265,7 +273,7 @@ class BlockchainService {
    * Read-only integrity check (no on-chain event, no gas, instant).
    */
   async checkIntegrity(datasetId, hashHex) {
-    this._ensureConnected();
+    await this._ensureConnected();
 
     const stored = await this.getHash(datasetId);
     const hashBytes32 = this._toBytes32(hashHex);
@@ -283,7 +291,7 @@ class BlockchainService {
    * Get hash version history for a dataset.
    */
   async getHashHistory(datasetId) {
-    this._ensureConnected();
+    await this._ensureConnected();
     const history = await this.contract.getHashHistory(datasetId);
     return {
       datasetId,
@@ -296,7 +304,7 @@ class BlockchainService {
    * Audit summary: record counts per type. Requires AUDITOR_ROLE on-chain.
    */
   async getAuditSummary() {
-    this._ensureConnected();
+    await this._ensureConnected();
     const [labResults, diagnoses, prescriptions, consentForms, imagingRecords, total] =
       await this.contract.getAuditSummary();
     return {
@@ -313,7 +321,7 @@ class BlockchainService {
    * Check if a dataset exists on-chain.
    */
   async datasetExists(datasetId) {
-    this._ensureConnected();
+    await this._ensureConnected();
     return await this.contract.datasetExists(datasetId);
   }
 
@@ -359,7 +367,7 @@ class BlockchainService {
    * Used so each user's on-chain transactions are signed by their own address.
    */
   getContractAs(privateKey) {
-    this._ensureConnected();
+    await this._ensureConnected();
     const wallet = new ethers.Wallet(privateKey, this.provider);
     return this.contract.connect(wallet);
   }
@@ -373,7 +381,7 @@ class BlockchainService {
    * @param {string} walletAddress — user's wallet address
    */
   async grantUserRole(roleKey, walletAddress) {
-    this._ensureConnected();
+    await this._ensureConnected();
 
     const ROLE_MAP = {
       nurse:           this.contract.INGESTION_ROLE,
@@ -400,7 +408,7 @@ class BlockchainService {
    * Store hash using a specific user's wallet (not the deployer).
    */
   async storeHashAs(privateKey, datasetId, hashHex, metadataCID = "", recordType = 0) {
-    this._ensureConnected();
+    await this._ensureConnected();
     const contractAs = this.getContractAs(privateKey);
     const hashBytes32 = this._toBytes32(hashHex);
 
@@ -423,7 +431,7 @@ class BlockchainService {
    * Update hash using a specific user's wallet.
    */
   async updateHashAs(privateKey, datasetId, newHashHex, metadataCID = "") {
-    this._ensureConnected();
+    await this._ensureConnected();
     const contractAs = this.getContractAs(privateKey);
     const hashBytes32 = this._toBytes32(newHashHex);
 
@@ -443,7 +451,7 @@ class BlockchainService {
    * Validate hash using a specific user's wallet (doctor role).
    */
   async validateHashAs(privateKey, datasetId, hashHex) {
-    this._ensureConnected();
+    await this._ensureConnected();
     const contractAs = this.getContractAs(privateKey);
     const hashBytes32 = this._toBytes32(hashHex);
 
@@ -470,7 +478,7 @@ class BlockchainService {
    * Fetch audit summary using a specific user's wallet (auditor role).
    */
   async getAuditSummaryAs(privateKey) {
-    this._ensureConnected();
+    await this._ensureConnected();
     const contractAs = this.getContractAs(privateKey);
     const [labResults, diagnoses, prescriptions, consentForms, imagingRecords, total] =
       await contractAs.getAuditSummary();
@@ -495,7 +503,10 @@ class BlockchainService {
     return ethers.zeroPadValue(hexString, 32);
   }
 
-  _ensureConnected() {
+  async _ensureConnected() {
+    if (!this.isConnected && this._initPromise) {
+      try { await this._initPromise; } catch { /* initError already stored */ }
+    }
     if (!this.isConnected) {
       throw new Error("Blockchain service not initialized. Check RPC connection and environment variables.");
     }
