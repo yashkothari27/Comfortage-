@@ -366,7 +366,7 @@ class BlockchainService {
    * Return a contract instance connected to a specific user wallet.
    * Used so each user's on-chain transactions are signed by their own address.
    */
-  getContractAs(privateKey) {
+  async getContractAs(privateKey) {
     await this._ensureConnected();
     const wallet = new ethers.Wallet(privateKey, this.provider);
     return this.contract.connect(wallet);
@@ -409,7 +409,7 @@ class BlockchainService {
    */
   async storeHashAs(privateKey, datasetId, hashHex, metadataCID = "", recordType = 0) {
     await this._ensureConnected();
-    const contractAs = this.getContractAs(privateKey);
+    const contractAs = await this.getContractAs(privateKey);
     const hashBytes32 = this._toBytes32(hashHex);
 
     logger.info(`Storing hash for dataset: ${datasetId} (type: ${BlockchainService.RECORD_TYPE_NAMES[recordType]})`);
@@ -432,7 +432,7 @@ class BlockchainService {
    */
   async updateHashAs(privateKey, datasetId, newHashHex, metadataCID = "") {
     await this._ensureConnected();
-    const contractAs = this.getContractAs(privateKey);
+    const contractAs = await this.getContractAs(privateKey);
     const hashBytes32 = this._toBytes32(newHashHex);
 
     const tx = await contractAs.updateHash(datasetId, hashBytes32, metadataCID, {
@@ -452,7 +452,7 @@ class BlockchainService {
    */
   async validateHashAs(privateKey, datasetId, hashHex) {
     await this._ensureConnected();
-    const contractAs = this.getContractAs(privateKey);
+    const contractAs = await this.getContractAs(privateKey);
     const hashBytes32 = this._toBytes32(hashHex);
 
     const tx = await contractAs.validateHash(datasetId, hashBytes32, {
@@ -479,7 +479,7 @@ class BlockchainService {
    */
   async getAuditSummaryAs(privateKey) {
     await this._ensureConnected();
-    const contractAs = this.getContractAs(privateKey);
+    const contractAs = await this.getContractAs(privateKey);
     const [labResults, diagnoses, prescriptions, consentForms, imagingRecords, total] =
       await contractAs.getAuditSummary();
     return {
