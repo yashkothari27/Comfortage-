@@ -668,6 +668,78 @@ const hash = '0x' + require('crypto').createHash('sha256')
       },
     },
 
+    '/api/v1/hash/upload': {
+      post: {
+        tags: ['Records'],
+        summary: 'Upload file → IPFS → hash anchored on-chain',
+        description: `
+Upload a medical record file (PDF, Word, DICOM, image). The API:
+1. Computes the SHA-256 hash of the file automatically
+2. Pins the file to IPFS via Pinata
+3. Stores the hash + IPFS CID on Reltime blockchain
+4. Returns a public IPFS link to view the file
+
+**Roles:** Nurse (LAB_RESULT, DIAGNOSIS, IMAGING) · Pharmacist (PRESCRIPTION) · Consent Officer (CONSENT_FORM)
+
+> ⚠️ Files uploaded here are publicly accessible via the IPFS gateway URL. Do not upload files containing unredacted patient PII in a production environment.
+        `,
+        operationId: 'uploadFile',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['file', 'datasetId', 'recordType'],
+                properties: {
+                  file:       { type: 'string', format: 'binary', description: 'File to upload (PDF, Word, DICOM, PNG, JPG — max 4 MB)' },
+                  datasetId:  { type: 'string', example: 'LAB-P10042-UPLOAD-001', description: 'Unique dataset ID' },
+                  recordType: { type: 'string', enum: ['LAB_RESULT', 'DIAGNOSIS', 'PRESCRIPTION', 'CONSENT_FORM', 'IMAGING'], example: 'LAB_RESULT' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'File pinned to IPFS and hash stored on-chain ✅',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success:          { type: 'boolean', example: true },
+                    message:          { type: 'string' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        datasetId:        { type: 'string' },
+                        recordType:       { type: 'string' },
+                        filename:         { type: 'string' },
+                        sizeBytes:        { type: 'integer' },
+                        hash:             { type: 'string', description: 'SHA-256 of the uploaded file' },
+                        cid:              { type: 'string', description: 'IPFS Content Identifier' },
+                        ipfsUrl:          { type: 'string', description: 'Public gateway link — open in browser to view the file' },
+                        transactionHash:  { type: 'string' },
+                        blockNumber:      { type: 'integer' },
+                        status:           { type: 'string', example: 'confirmed' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Missing file, datasetId, or invalid recordType' },
+          '401': { description: 'Authentication required' },
+          '403': { description: 'Your role cannot submit this record type' },
+          '409': { description: 'Dataset ID already exists — use PUT to update' },
+          '503': { description: 'IPFS service not configured (PINATA_JWT missing)' },
+        },
+      },
+    },
+
     '/api/v1/hash/{datasetId}': {
       get: {
         tags: ['Records'],

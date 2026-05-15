@@ -1,10 +1,15 @@
 const express = require("express");
+const multer  = require("multer");
 const { body, param, validationResult } = require("express-validator");
 const blockchainService = require("../services/blockchainService");
 const { authorizeRole, authorizeRecordType } = require("../middleware/auth");
 const { decryptPrivateKey } = require("../services/walletService");
+const { uploadToIPFS, computeSHA256 } = require("../services/ipfsService");
 const db = require("../db/database");
 const logger = require("../logger");
+
+// 4 MB in-memory limit (Vercel serverless max payload is 4.5 MB)
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
 
 /** Load the calling user's decrypted private key from DB. */
 function getUserPrivateKey(userId) {
@@ -248,6 +253,74 @@ router.get(
     } catch (error) {
       logger.error(`GET /hash/audit/summary failed: ${error.message}`);
       res.status(500).json({ success: false, error: "Audit summary failed", detail: error.message });
+    }
+  }
+);
+
+// ═══════════════════════════════════════════════════════════════════
+// POST /api/v1/hash/upload — Upload file → IPFS → hash stored on-chain
+// Roles: nurse (LAB_RESULT, DIAGNOSIS, IMAGING)
+//        pharmacist (PRESCRIPTION)
+//        consent_officer (CONSENT_FORM)
+// ═══════════════════════════════════════════════════════════════════
+router.post(
+  "/upload",
+  authorizeRole("nurse", "pharmacist", "consent_officer"),
+  upload.single("file"),
+  authorizeRecordType,
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, error: "No file uploaded. Send a multipart/form-data request with a 'file' field." });
+      }
+
+      const { datasetId, recordType } = req.body;
+      if (!datasetId) return res.status(400).json({ success: false, error: "datasetId is required" });
+      if (!VALID_RECORD_TYPES.includes(recordType)) {
+        return res.status(400).json({ success: false, error: `recordType must be one of: ${VALID_RECORD_TYPES.join(", ")}` });
+      }
+
+      logger.info(`POST /hash/upload — dataset: ${datasetId}, type: ${recordType}, file: ${req.file.originalname} (${req.file.size}B), from: ${req.user?.email}`);
+
+      // 1. Compute SHA-256 of the raw file bytes
+      const hash = computeSHA256(req.file.buffer);
+
+      // 2. Upload to Pinata IPFS
+      const { cid, ipfsUrl } = await uploadToIPFS(req.file.buffer, req.file.originalname, req.file.mimetype);
+      logger.info(`IPFS upload complete: ${cid}`);
+
+      // 3. Store hash + CID on-chain
+      const recordTypeIndex = RECORD_TYPE_INDEX[recordType];
+      const privateKey = getUserPrivateKey(req.user.userId);
+      const result = await blockchainService.storeHashAs(privateKey, datasetId, hash, cid, recordTypeIndex);
+
+      res.status(201).json({
+        success: true,
+        message: "File uploaded to IPFS and hash anchored on Reltime blockchain",
+        data: {
+          datasetId,
+          recordType,
+          filename: req.file.originalname,
+          sizeBytes: req.file.size,
+          hash,
+          cid,
+          ipfsUrl,
+          transactionHash: result.transactionHash,
+          blockNumber:     result.blockNumber,
+          status:          result.status,
+        },
+      });
+    } catch (error) {
+      logger.error(`POST /hash/upload failed: ${error.message}`);
+
+      if (error.message.includes("DatasetAlreadyExists")) {
+        return res.status(409).json({ success: false, error: "Dataset already exists. Use PUT /hash/:datasetId to update." });
+      }
+      if (error.message.includes("PINATA_JWT")) {
+        return res.status(503).json({ success: false, error: "IPFS service not configured. Add PINATA_JWT to environment variables." });
+      }
+
+      res.status(500).json({ success: false, error: "Upload failed", detail: error.message });
     }
   }
 );

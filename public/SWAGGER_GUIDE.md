@@ -40,6 +40,26 @@ Even if the entire blockchain were compromised, an attacker would only see strin
 | Consent Form | `CONSENT_FORM` | Consent Manager | Study participation consent |
 | Imaging | `IMAGING` | Nurse | Chest X-ray, MRI, CT scan |
 
+### File Upload with IPFS (New)
+
+Instead of computing a hash manually, you can upload the actual file directly:
+
+```
+POST /api/v1/hash/upload  (multipart/form-data)
+  Fields: file=<your PDF/Word/image>, datasetId=..., recordType=...
+
+Response:
+  hash:     "0x3c59dc..."   ← SHA-256 computed automatically
+  cid:      "QmXyz..."      ← IPFS Content Identifier
+  ipfsUrl:  "https://gateway.pinata.cloud/ipfs/QmXyz..."  ← open in browser
+  transactionHash: "0xabc..."  ← on-chain proof
+```
+
+> Files are pinned to **Pinata IPFS** — publicly accessible via the gateway link.
+> Requires `PINATA_JWT` in Vercel environment variables (see setup below).
+
+---
+
 ### Real-World Clinical Workflow
 
 ```
@@ -284,3 +304,16 @@ npm run seed         # create test users in local DB
 PORT=3001 npm start  # start server (3000 may be taken by another app)
 open http://localhost:3001/docs
 ```
+
+---
+
+## Pinata IPFS Setup (for file upload)
+
+1. Create a free account at **[pinata.cloud](https://pinata.cloud)**
+2. Go to **API Keys → New Key** → enable `pinFileToIPFS` → generate
+3. Copy the **JWT** (long token starting with `eyJ...`)
+4. Add to Vercel: **Settings → Environment Variables → `PINATA_JWT`** = your JWT
+5. Redeploy
+
+Once set, `POST /api/v1/hash/upload` in Swagger will accept real files.
+The response includes an `ipfsUrl` — paste it in your browser to view the uploaded file.
