@@ -1,268 +1,392 @@
-# COMFORTage T3.3 — API Reference & Testing Guide
+# COMFORTage T3.3 — Role-Based Access Guide
 
-**Swagger UI:** `http://localhost:3001/docs` (local) · `/docs` on your Vercel deployment
+**Live API:** `https://comfortage.vercel.app/docs`
 
 ---
 
-## About This System
+## How to Use This Guide
 
-**Network:** Reltime Mainnet · PoA · Chain ID 32323 · Zero gas fees
-**Contract:** `0xb032Fca326E02254d50509f35F8D6fd4cccDB3B0`
+Every action in this system requires a JWT token. Steps for each role:
 
-### Why Proof of Authority (PoA) in Healthcare?
+1. Go to `/docs` → expand **Account → POST /api/v1/auth/login**
+2. Click **Try it out** → pick your account from the dropdown → **Execute**
+3. Copy the `token` value from the response
+4. Click **Authorize 🔓** (top-right) → paste token → **Authorize → Close**
+5. All endpoints for your role now work
 
-| Benefit | Detail |
-|---------|--------|
-| **Scalability & Speed** | Faster transactions with high throughput — critical for real-time medical data management |
-| **Energy Efficiency** | No resource-intensive mining (unlike PoW) — sustainable for large-scale health infrastructure |
-| **Trusted Security** | Pre-approved, identified validators (hospitals, regulators) ensure integrity; bad actors can be identified and removed |
+Token expires after **24 hours** — just login again.
 
-### What Gets Stored On-Chain?
+---
 
-Nothing personal. Only the cryptographic fingerprint (SHA-256 hash) of the record is stored.
+## Role Summary
 
-| What You Have (Off-Chain) | What Blockchain Stores |
-|---------------------------|------------------------|
-| CBC blood panel PDF | `0x3c59dc04…` (64-char hash) |
-| Metformin prescription | `0xa1b2c3d4…` (64-char hash) |
-| Signed consent form | `0xf9e8d7c6…` (64-char hash) |
-| Chest X-ray DICOM | `0x11223344…` (64-char hash) |
+| Role | Login Email | Password | Can Do |
+|------|------------|----------|--------|
+| **Admin** | `admin@comfortage.health` | `Admin@Comfortage2024!` | Manage users & roles |
+| **Nurse** | `sara.johnson@comfortage.health` | `Nurse@Sara2024!` | Submit lab results, diagnoses, imaging |
+| **Nurse** | `miguel.torres@comfortage.health` | `Nurse@Miguel2024!` | Submit lab results, diagnoses, imaging |
+| **Doctor** | `dr.emily.chen@comfortage.health` | `Doctor@Emily2024!` | Validate records on-chain |
+| **Doctor** | `dr.james.patel@comfortage.health` | `Doctor@James2024!` | Validate records on-chain |
+| **Pharmacist** | `anna.schmidt@comfortage.health` | `Pharma@Anna2024!` | Submit prescriptions |
+| **Pharmacist** | `lucas.martin@comfortage.health` | `Pharma@Lucas2024!` | Submit prescriptions |
+| **Consent Officer** | `sofia.russo@comfortage.health` | `Consent@Sofia2024!` | Submit consent forms |
+| **Consent Officer** | `alex.nguyen@comfortage.health` | `Consent@Alex2024!` | Submit consent forms |
+| **Auditor** | `claire.dubois@comfortage.health` | `Audit@Claire2024!` | View compliance summary |
+| **Auditor** | `peter.kowalski@comfortage.health` | `Audit@Peter2024!` | View compliance summary |
 
-Even if the entire blockchain were compromised, an attacker would only see strings of random characters — **zero readable medical information**.
+---
 
-### Record Types
+## Role 1 — Admin
 
-| Type | Code | Who Can Submit | Real-World Example |
-|------|------|----------------|--------------------|
-| Lab Result | `LAB_RESULT` | Nurse | CBC blood panel, HbA1c, CMP |
-| Diagnosis | `DIAGNOSIS` | Nurse | ICD-10 coded clinical diagnosis |
-| Prescription | `PRESCRIPTION` | Pharmacist | Metformin 500mg BID × 60 |
-| Consent Form | `CONSENT_FORM` | Consent Manager | Study participation consent |
-| Imaging | `IMAGING` | Nurse | Chest X-ray, MRI, CT scan |
+**What they do:** Manage users and assign roles. Cannot submit blockchain records (no on-chain permission).
 
-### File Upload with IPFS (New)
+### Allowed Endpoints
 
-Instead of computing a hash manually, you can upload the actual file directly:
+#### GET /api/v1/auth/me
+View your own profile and wallet address.
+
+#### GET /api/v1/admin/users
+List all registered users with their roles and wallet addresses.
+
+```json
+Response:
+{
+  "users": [
+    { "id": 1, "email": "admin@comfortage.health", "role": "admin", "walletAddress": "0x..." },
+    { "id": 2, "email": "sara.johnson@comfortage.health", "role": "nurse", "walletAddress": "0x..." }
+  ]
+}
+```
+
+#### GET /api/v1/admin/users/{id}
+Get a single user by ID.
+
+#### PUT /api/v1/admin/users/{id}/role
+Assign a role to a user. When a role is assigned, the backend automatically calls `grantRole()` on the smart contract — the user's wallet gets the on-chain permission instantly.
+
+```json
+Request body:
+{ "role": "nurse" }
+
+Valid roles: nurse · doctor · pharmacist · consent_officer · auditor · pending
+```
+
+#### DELETE /api/v1/admin/users/{id}
+Remove a user from the system.
+
+#### GET /api/v1/hash/{datasetId}  *(read only)*
+Admin can read any record on-chain.
+
+### Blocked Endpoints
+| Endpoint | Response |
+|----------|----------|
+| POST /api/v1/hash | 403 — admin has no INGESTION_ROLE on-chain |
+| POST /api/v1/hash/validate | 403 — admin has no VALIDATOR_ROLE on-chain |
+| GET /api/v1/hash/audit/summary | 403 — auditor role required |
+
+---
+
+## Role 2 — Nurse
+
+**What they do:** Submit medical record hashes to the blockchain. Nurses hold `INGESTION_ROLE` on-chain.
+
+**Permitted record types:** `LAB_RESULT` · `DIAGNOSIS` · `IMAGING`
+
+### Allowed Endpoints
+
+#### POST /api/v1/hash — Store a record hash
+Submit a SHA-256 hash of a medical file. The file itself stays in your hospital system — only the fingerprint goes on-chain.
+
+```json
+Request body:
+{
+  "datasetId":   "LAB-P10042-CBC-20240401",
+  "hash":        "0x3c59dc048e8850243be8079a5c74d079934b91d7321b8e09f8ce1fde91baa2ae",
+  "recordType":  "LAB_RESULT",
+  "metadataCID": "QmLabCBCP10042"
+}
+
+Response (201):
+{
+  "success": true,
+  "data": {
+    "transactionHash": "0xabc...",
+    "blockNumber": 38644017,
+    "status": "confirmed"
+  }
+}
+```
+
+#### POST /api/v1/hash/upload — Upload file directly to IPFS
+Upload a real file (PDF, Word, DICOM, image — max 4 MB). Hash is computed automatically, file is pinned to Pinata IPFS, and hash is stored on-chain.
 
 ```
-POST /api/v1/hash/upload  (multipart/form-data)
-  Fields: file=<your PDF/Word/image>, datasetId=..., recordType=...
+Form fields:
+  file        → select your PDF/Word/image file
+  datasetId   → unique ID e.g. LAB-P10042-XRAY-001
+  recordType  → LAB_RESULT / DIAGNOSIS / IMAGING
 
 Response:
-  hash:     "0x3c59dc..."   ← SHA-256 computed automatically
-  cid:      "QmXyz..."      ← IPFS Content Identifier
-  ipfsUrl:  "https://gateway.pinata.cloud/ipfs/QmXyz..."  ← open in browser
-  transactionHash: "0xabc..."  ← on-chain proof
+{
+  "hash":    "0x3c59dc...",
+  "cid":     "QmXyz...",
+  "ipfsUrl": "https://gateway.pinata.cloud/ipfs/QmXyz..."  ← open in browser
+}
 ```
 
-> Files are pinned to **Pinata IPFS** — publicly accessible via the gateway link.
-> Requires `PINATA_JWT` in Vercel environment variables (see setup below).
+#### PUT /api/v1/hash/{datasetId} — Update an existing record
+Amend a record (e.g. corrected lab result). The old hash is preserved in history on-chain.
+
+```json
+Request body:
+{
+  "hash":        "0xnew64charhashhere...",
+  "metadataCID": "QmUpdatedCID"
+}
+```
+
+#### GET /api/v1/hash/{datasetId} — Read a record
+Retrieve any stored record. Returns hash, timestamp, submitter address, and record type.
+
+#### GET /api/v1/hash/history/{datasetId} — Version history
+See all previous hashes for an amended record.
+
+#### GET /api/v1/hash/check/{datasetId}/{hash} — Integrity check
+Verify a file against its on-chain hash. Returns `isValid: true/false`. No blockchain transaction — instant and free.
+
+### Blocked Endpoints
+| Endpoint | Response |
+|----------|----------|
+| POST /hash with PRESCRIPTION | 403 — pharmacist role required |
+| POST /hash with CONSENT_FORM | 403 — consent officer role required |
+| POST /hash/validate | 403 — doctor role required |
+| GET /audit/summary | 403 — auditor role required |
+
+### Pre-Seeded Records (already on-chain)
+| Dataset ID | Type |
+|-----------|------|
+| `LAB-P10042-CBC-20240318` | LAB_RESULT |
+| `LAB-P10042-CMP-20240318` | LAB_RESULT |
+| `LAB-P10099-HBA1C-20240320` | LAB_RESULT |
+| `IMG-P10099-CXR-20240320` | IMAGING |
+| `DX-P10042-T2DM-HTN-20240318` | DIAGNOSIS |
 
 ---
 
-### Real-World Clinical Workflow
+## Role 3 — Doctor
 
-```
-STEP 1 — Nurse uploads a lab test (PDF, Word, DICOM, etc.)
-  Nurse has a lab result file (e.g. "CBC_blood_panel.pdf")
-  → Compute SHA-256 hash of the file (see "Generating a SHA-256 Hash" below)
-  → POST /api/v1/hash  with recordType: LAB_RESULT
-  → Hash is stored on-chain; the actual file stays in your hospital system
+**What they do:** Validate that a record has not been tampered with. Doctors hold `VALIDATOR_ROLE` on-chain. Validation writes an `IntegrityChecked` audit event to the blockchain.
 
-STEP 2 — Doctor reviews and writes a prescription
-  Doctor calls GET /api/v1/hash/{datasetId} to confirm the record exists
-  → POST /api/v1/hash/validate to certify it on-chain (IntegrityChecked audit event)
-  Pharmacist or Nurse then submits the prescription file:
-  → POST /api/v1/hash  with recordType: PRESCRIPTION
+### Allowed Endpoints
 
-STEP 3 — Pharmacist verifies the prescription
-  Pharmacist receives the physical prescription or file
-  → Compute SHA-256 hash of their copy of the file
-  → GET /api/v1/hash/check/{datasetId}/{hash}  (read-only, no gas)
-  → isValid: true  = file is unchanged, safe to dispense
-  → isValid: false = file was tampered — do NOT dispense
-```
+#### POST /api/v1/hash/validate — Validate a record (on-chain)
+Confirm a record's integrity. This writes a permanent audit event on-chain — who validated, when, and whether the hash matched.
 
-> **Important:** The API stores the cryptographic fingerprint (hash) of files, not the files themselves.
-> PDFs, Word docs, and images live in your existing hospital system or secure storage.
-> The blockchain acts as a tamper-proof receipt — anyone with the original file can verify it instantly.
+```json
+Request body:
+{
+  "datasetId": "LAB-P10042-CBC-20240318",
+  "hash":      "0x3c59dc048e8850243be8079a5c74d079934b91d7321b8e09f8ce1fde91baa2ae"
+}
 
-### How the System Works
-
-```
-1. TRUTH MACHINE — Version tracking
-   Nurse uploads lab result → hash stored on-chain
-   Record updated → new hash stored → old hash preserved in history
-   Anyone can compare file against on-chain hash — one changed character = mismatch = TAMPERED
-
-2. ACCOUNTABILITY — Role-based audit trail
-   Nurse uploads → on-chain record: who, when, what type
-   Doctor validates → on-chain IntegrityChecked event: validator address + result
-   Auditor reads summary → compliance dashboard, no patient data exposed
-
-3. PATIENT PORTABILITY — Data is yours
-   Records live off-chain (hospital system, secure app, cloud)
-   Blockchain holds the "receipt" — any new hospital can verify authenticity instantly
+Response:
+{
+  "success": true,
+  "data": {
+    "isValid":         true,
+    "recordTypeName":  "LAB_RESULT",
+    "transactionHash": "0xabc...",
+    "blockNumber":     38667735
+  }
+}
 ```
 
-### How Authentication Works
+> To get the correct hash: call `GET /hash/{datasetId}` first — the `hash` field in the response is what to validate against.
 
-Users never interact with blockchain wallets directly. The backend manages wallets transparently.
+#### GET /api/v1/hash/check/{datasetId}/{hash} — Quick read-only check
+No blockchain transaction. Instant comparison against stored hash. Use this to check before committing a full on-chain validation.
 
-```
-Register  →  backend generates wallet  →  private key encrypted (AES-256-GCM) in DB
-Login     →  JWT returned with role
-API call  →  backend decrypts key  →  signs on-chain tx using your wallet
-```
+#### GET /api/v1/hash/{datasetId} — Read a record
+#### GET /api/v1/hash/history/{datasetId} — Version history
+
+### Blocked Endpoints
+| Endpoint | Response |
+|----------|----------|
+| POST /hash | 403 — nurse/pharmacist/consent officer only |
+| GET /audit/summary | 403 — auditor role required |
 
 ---
 
-## Quick Start (3 Steps)
+## Role 4 — Pharmacist
 
-### Step 1 — Login to get your token
+**What they do:** Submit prescription hashes to the blockchain. Pharmacists hold `PHARMACIST_ROLE` on-chain.
 
-In Swagger: expand **Account → POST /api/v1/auth/login**, click **Try it out**, pick an example from the dropdown, click **Execute**, and copy the `token` value from the response.
+**Permitted record types:** `PRESCRIPTION` only
 
-Or via curl:
-```bash
-curl -X POST http://localhost:3001/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"sara.johnson@comfortage.health","password":"Nurse@Sara2024!"}'
+### Allowed Endpoints
+
+#### POST /api/v1/hash — Store a prescription
+```json
+{
+  "datasetId":   "RX-P10042-MET-20240401",
+  "hash":        "0xb2c3d4e5f67890123456789012345678901234567890123456789012b2c3d4e5",
+  "recordType":  "PRESCRIPTION",
+  "metadataCID": "QmRxMetforminP10042"
+}
 ```
 
-### Step 2 — Authorize in Swagger
+#### POST /api/v1/hash/upload — Upload prescription file to IPFS
+Upload the actual prescription document. Returns an IPFS link the patient or doctor can open.
 
-Click the **Authorize 🔓** button (top-right). Paste the token (no prefix, just the raw `eyJ…` string). Click **Authorize → Close**.
+#### PUT /api/v1/hash/{datasetId} — Amend a prescription
+#### GET /api/v1/hash/{datasetId} — Read any record
+#### GET /api/v1/hash/check/{datasetId}/{hash} — Verify a prescription
 
-### Step 3 — Call any endpoint
+### Blocked Endpoints
+| Endpoint | Response |
+|----------|----------|
+| POST /hash with LAB_RESULT | 403 |
+| POST /hash with DIAGNOSIS | 403 |
+| POST /hash with IMAGING | 403 |
+| POST /hash with CONSENT_FORM | 403 |
+| POST /hash/validate | 403 |
 
-All protected endpoints now work for your session. Token expires after 24 hours — just login again.
-
----
-
-## Test Accounts
-
-| Role | Email | Password | What they can do |
-|------|-------|----------|-----------------|
-| **Admin** | `admin@comfortage.health` | `Admin@Comfortage2024!` | Manage users, assign roles — **cannot submit blockchain records** (no on-chain role) |
-| **Nurse 1** | `sara.johnson@comfortage.health` | `Nurse@Sara2024!` | Store LAB_RESULT, DIAGNOSIS, IMAGING |
-| **Nurse 2** | `miguel.torres@comfortage.health` | `Nurse@Miguel2024!` | Store LAB_RESULT, DIAGNOSIS, IMAGING |
-| **Doctor 1** | `dr.emily.chen@comfortage.health` | `Doctor@Emily2024!` | Validate any record type (on-chain audit) |
-| **Doctor 2** | `dr.james.patel@comfortage.health` | `Doctor@James2024!` | Validate any record type (on-chain audit) |
-| **Pharmacist 1** | `anna.schmidt@comfortage.health` | `Pharma@Anna2024!` | Store PRESCRIPTION only |
-| **Pharmacist 2** | `lucas.martin@comfortage.health` | `Pharma@Lucas2024!` | Store PRESCRIPTION only |
-| **Consent Mgr 1** | `sofia.russo@comfortage.health` | `Consent@Sofia2024!` | Store CONSENT_FORM only |
-| **Consent Mgr 2** | `alex.nguyen@comfortage.health` | `Consent@Alex2024!` | Store CONSENT_FORM only |
-| **Auditor 1** | `claire.dubois@comfortage.health` | `Audit@Claire2024!` | Read compliance audit summary |
-| **Auditor 2** | `peter.kowalski@comfortage.health` | `Audit@Peter2024!` | Read compliance audit summary |
-
-> Each role maps to an on-chain permission. Using an action your role doesn't have will return a 500 transaction revert.
+### Pre-Seeded Records
+| Dataset ID | Type |
+|-----------|------|
+| `RX-P10042-MET-20240318` | PRESCRIPTION |
+| `RX-P10042-AML-20240318` | PRESCRIPTION |
+| `RX-P10099-INS-20240320` | PRESCRIPTION |
 
 ---
 
-## Pre-Seeded Records
+## Role 5 — Consent Officer
 
-These dataset IDs are already stored on-chain. Use them directly in `GET /hash/{datasetId}`.
+**What they do:** Submit patient consent form hashes. Holds `CONSENT_MANAGER_ROLE` on-chain.
 
-| Dataset ID | Type | Patient | Submitted By |
-|-----------|------|---------|--------------|
-| `LAB-P10042-CBC-20240318` | LAB_RESULT | P10042 | Sara Johnson (Nurse) |
-| `LAB-P10042-CMP-20240318` | LAB_RESULT | P10042 | Sara Johnson (Nurse) |
-| `LAB-P10099-HBA1C-20240320` | LAB_RESULT | P10099 | Miguel Torres (Nurse) |
-| `IMG-P10099-CXR-20240320` | IMAGING | P10099 | Miguel Torres (Nurse) |
-| `DX-P10042-T2DM-HTN-20240318` | DIAGNOSIS | P10042 | Sara Johnson (Nurse) |
-| `RX-P10042-MET-20240318` | PRESCRIPTION | P10042 | Anna Schmidt (Pharmacist) |
-| `RX-P10042-AML-20240318` | PRESCRIPTION | P10042 | Anna Schmidt (Pharmacist) |
-| `RX-P10099-INS-20240320` | PRESCRIPTION | P10099 | Lucas Martin (Pharmacist) |
-| `CONSENT-P10042-STUDY-20240315` | CONSENT_FORM | P10042 | Sofia Russo (Consent Mgr) |
-| `CONSENT-P10099-STUDY-20240316` | CONSENT_FORM | P10099 | Alex Nguyen (Consent Mgr) |
+**Permitted record types:** `CONSENT_FORM` only
 
----
+### Allowed Endpoints
 
-## Role → On-Chain Permission Mapping
+#### POST /api/v1/hash — Store a consent form
+```json
+{
+  "datasetId":   "CONSENT-P10042-STUDY-20240401",
+  "hash":        "0xc3d4e5f6789012345678901234567890123456789012345678901234c3d4e5f6",
+  "recordType":  "CONSENT_FORM",
+  "metadataCID": "QmConsentP10042Study"
+}
+```
 
-When an admin assigns a role, the backend simultaneously updates the DB and calls `contract.grantRole()` on Reltime Mainnet.
+#### POST /api/v1/hash/upload — Upload consent document to IPFS
+#### PUT /api/v1/hash/{datasetId} — Amend a consent record
+#### GET /api/v1/hash/{datasetId} — Read any record
 
-| Role | Solidity Constant | Permitted Actions |
-|------|-------------------|-------------------|
-| `nurse` | `INGESTION_ROLE` | Store LAB_RESULT, DIAGNOSIS, IMAGING |
-| `doctor` | `VALIDATOR_ROLE` | Validate all record types |
-| `pharmacist` | `PHARMACIST_ROLE` | Store PRESCRIPTION |
-| `consent_manager` | `CONSENT_MANAGER_ROLE` | Store CONSENT_FORM |
-| `auditor` | `AUDITOR_ROLE` | Read audit summary |
-| `admin` | — | All of the above + user management |
+### Blocked Endpoints
+| Endpoint | Response |
+|----------|----------|
+| POST /hash with any other type | 403 |
+| POST /hash/validate | 403 |
 
----
-
-## Endpoint Reference
-
-### Public
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Service + blockchain status |
-| POST | `/api/v1/auth/register` | Create account (role starts as `pending`) |
-| POST | `/api/v1/auth/login` | Get JWT token |
-
-### Auth (any valid token)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/auth/me` | Your profile and wallet address |
-
-### Records (nurse / pharmacist / consent_officer)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/v1/hash` | Store a hash on-chain |
-| GET | `/api/v1/hash/{datasetId}` | Retrieve a stored record |
-| PUT | `/api/v1/hash/{datasetId}` | Amend a record (preserves history) |
-| GET | `/api/v1/hash/history/{datasetId}` | Full version history |
-
-### Validation (doctor)
-
-| Method | Path | On-Chain Tx | Description |
-|--------|------|:-----------:|-------------|
-| POST | `/api/v1/hash/validate` | Yes | Validate + write audit event |
-| GET | `/api/v1/hash/check/{datasetId}/{hash}` | No | Quick read-only integrity check |
-
-### Audit (auditor)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/hash/audit/summary` | Record counts by type |
-
-### Admin
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/admin/users` | List all users |
-| GET | `/api/v1/admin/users/{id}` | Get single user |
-| PUT | `/api/v1/admin/users/{id}/role` | Assign a role |
-| DELETE | `/api/v1/admin/users/{id}` | Delete a user |
+### Pre-Seeded Records
+| Dataset ID | Type |
+|-----------|------|
+| `CONSENT-P10042-STUDY-20240315` | CONSENT_FORM |
+| `CONSENT-P10099-STUDY-20240316` | CONSENT_FORM |
 
 ---
 
-## Example Workflow: Store → Validate → Audit
+## Role 6 — Auditor
+
+**What they do:** Read compliance statistics. Holds `AUDITOR_ROLE` on-chain. Cannot write anything.
+
+### Allowed Endpoints
+
+#### GET /api/v1/hash/audit/summary — Compliance dashboard
+Returns record counts by type across the entire system.
+
+```json
+Response:
+{
+  "success": true,
+  "data": {
+    "labResults":     7,
+    "diagnoses":      1,
+    "prescriptions":  5,
+    "consentForms":   2,
+    "imagingRecords": 1,
+    "total":          16
+  }
+}
+```
+
+#### GET /api/v1/hash/{datasetId} — Read any record
+#### GET /api/v1/hash/history/{datasetId} — Version history
+#### GET /api/v1/hash/check/{datasetId}/{hash} — Integrity check
+
+### Blocked Endpoints
+| Endpoint | Response |
+|----------|----------|
+| POST /hash | 403 |
+| POST /hash/validate | 403 |
+| Any admin endpoint | 403 |
+
+---
+
+## Complete Permission Matrix
+
+| Endpoint | Admin | Nurse | Doctor | Pharmacist | Consent Officer | Auditor |
+|----------|:-----:|:-----:|:------:|:----------:|:---------------:|:-------:|
+| GET /auth/me | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| POST /hash (LAB_RESULT) | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| POST /hash (DIAGNOSIS) | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| POST /hash (IMAGING) | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| POST /hash (PRESCRIPTION) | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| POST /hash (CONSENT_FORM) | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| POST /hash/upload | ❌ | ✅ | ❌ | ✅ | ✅ | ❌ |
+| PUT /hash/:id | ❌ | ✅ | ❌ | ✅ | ✅ | ❌ |
+| GET /hash/:id | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| GET /hash/history/:id | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| POST /hash/validate | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| GET /hash/check/:id/:hash | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| GET /hash/audit/summary | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| GET /admin/users | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| PUT /admin/users/:id/role | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| DELETE /admin/users/:id | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+---
+
+## End-to-End Workflow Example
 
 ```
-1. Authorize as Nurse (Sara Johnson)
-2. POST /api/v1/hash
-      datasetId: "LAB-P10042-NEWCBC-20240401"
-      hash:      "0x3c59dc048e8850243be8079a5c74d079934b91d7321b8e09f8ce1fde91baa2ae"
-      recordType: "LAB_RESULT"
-      metadataCID: "QmLabCBCP10042Apr2024"
-   → confirmed on-chain, get transactionHash
+Step 1 — Nurse stores a blood test result
+  Login: sara.johnson@comfortage.health / Nurse@Sara2024!
+  POST /hash
+    datasetId:  "LAB-P10042-CBC-20240401"
+    hash:       "0x3c59dc048e8850243be8079a5c74d079934b91d7321b8e09f8ce1fde91baa2ae"
+    recordType: "LAB_RESULT"
+  → confirmed on Reltime Mainnet (transactionHash, blockNumber)
 
-3. Authorize as Doctor (Dr. Emily Chen)
-4. POST /api/v1/hash/validate
-      datasetId: "LAB-P10042-NEWCBC-20240401"
-      hash:      "0x3c59dc048e8850243be8079a5c74d079934b91d7321b8e09f8ce1fde91baa2ae"
-   → isValid: true, IntegrityChecked event written on-chain
+Step 2 — Doctor reviews and validates
+  Login: dr.emily.chen@comfortage.health / Doctor@Emily2024!
+  GET /hash/LAB-P10042-CBC-20240401  ← get the stored hash
+  POST /hash/validate
+    datasetId: "LAB-P10042-CBC-20240401"
+    hash:      "0x3c59dc..."
+  → isValid: true, IntegrityChecked event written on-chain
 
-5. Authorize as Auditor (Claire Dubois)
-6. GET /api/v1/hash/audit/summary
-   → { labResults: N, prescriptions: N, … total: N }
+Step 3 — Pharmacist submits the prescription
+  Login: anna.schmidt@comfortage.health / Pharma@Anna2024!
+  POST /hash
+    datasetId:  "RX-P10042-MET-20240401"
+    hash:       "0xb2c3d4e5..."
+    recordType: "PRESCRIPTION"
+  → confirmed on-chain
+
+Step 4 — Auditor checks compliance
+  Login: claire.dubois@comfortage.health / Audit@Claire2024!
+  GET /hash/audit/summary
+  → { labResults: 8, prescriptions: 6, total: 17 }
 ```
 
 ---
@@ -271,38 +395,41 @@ When an admin assigns a role, the backend simultaneously updates the DB and call
 
 ```bash
 # Node.js
-const crypto = require('crypto');
-const hash = '0x' + crypto.createHash('sha256').update(fileBuffer).digest('hex');
+const hash = '0x' + require('crypto').createHash('sha256').update(fileBuffer).digest('hex');
 
 # Python
 import hashlib
 hash = '0x' + hashlib.sha256(open('record.pdf','rb').read()).hexdigest()
 
-# Linux / Mac terminal
-sha256sum record.pdf
+# Mac / Linux terminal
+shasum -a 256 record.pdf
 ```
+
+Or use **POST /hash/upload** — the API computes the hash automatically from your file.
 
 ---
 
 ## Common Errors
 
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `401 Invalid email or password` | User not in database | Run `npm run seed` |
-| `401 No token` | Forgot to authorize | Click Authorize 🔓 and paste token |
-| `403 Forbidden` | Wrong role for this action | Switch to the correct test account |
-| `500 transaction execution reverted` | Wallet lacks on-chain role | Use a pre-seeded test account |
-| `Failed to fetch` in Swagger | Wrong server selected or mixed HTTP/HTTPS | Check the Servers dropdown at the top of Swagger UI |
+| HTTP | Error | Cause | Fix |
+|------|-------|-------|-----|
+| 401 | Invalid email or password | Wrong credentials | Check the password in the table above |
+| 401 | Authentication required | No token | Click Authorize 🔓 and paste token |
+| 403 | Role not permitted | Using wrong account for this action | Switch to the correct role account |
+| 400 | hash must be 64-char hex | Hash is wrong length or format | Must be `0x` + exactly 64 hex characters |
+| 409 | Dataset already exists | datasetId already used | Use a unique datasetId or PUT to update |
+| 503 | IPFS service not configured | PINATA_JWT missing | Add PINATA_JWT to Vercel environment variables |
 
 ---
 
 ## Local Setup
 
 ```bash
-npm install          # install dependencies
-npm run seed         # create test users in local DB
-PORT=3001 npm start  # start server (3000 may be taken by another app)
+npm install
+npm run seed         # seed all 11 test users
+PORT=3001 npm start
 open http://localhost:3001/docs
+open http://localhost:3001/guide
 ```
 
 ---
@@ -312,8 +439,5 @@ open http://localhost:3001/docs
 1. Create a free account at **[pinata.cloud](https://pinata.cloud)**
 2. Go to **API Keys → New Key** → enable `pinFileToIPFS` → generate
 3. Copy the **JWT** (long token starting with `eyJ...`)
-4. Add to Vercel: **Settings → Environment Variables → `PINATA_JWT`** = your JWT
-5. Redeploy
-
-Once set, `POST /api/v1/hash/upload` in Swagger will accept real files.
-The response includes an `ipfsUrl` — paste it in your browser to view the uploaded file.
+4. In Vercel: **Settings → Environment Variables → `PINATA_JWT`** = your JWT
+5. Redeploy — `POST /hash/upload` will then accept real files
