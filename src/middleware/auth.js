@@ -4,21 +4,21 @@ const logger = require("../logger");
 
 // Roles recognised by the system
 const ROLES = {
-  NURSE:           "nurse",
-  DOCTOR:          "doctor",
-  PHARMACIST:      "pharmacist",
-  CONSENT_MANAGER: "consent_manager",
-  AUDITOR:         "auditor",
-  ADMIN:           "admin",
-  PENDING:         "pending",
+  NURSE:            "nurse",
+  DOCTOR:           "doctor",
+  PHARMACIST:       "pharmacist",
+  CONSENT_OFFICER:  "consent_officer",
+  AUDITOR:          "auditor",
+  ADMIN:            "admin",
+  PENDING:          "pending",
 };
 
 // Which record types each role may ingest (API-layer pre-check)
+// Admin has no on-chain role — admin manages users only, cannot submit blockchain records
 const ROLE_ALLOWED_TYPES = {
   [ROLES.NURSE]:           ["LAB_RESULT", "DIAGNOSIS", "IMAGING"],
   [ROLES.PHARMACIST]:      ["PRESCRIPTION"],
-  [ROLES.CONSENT_MANAGER]: ["CONSENT_FORM"],
-  [ROLES.ADMIN]:           ["LAB_RESULT", "DIAGNOSIS", "PRESCRIPTION", "CONSENT_FORM", "IMAGING"],
+  [ROLES.CONSENT_OFFICER]: ["CONSENT_FORM"],
 };
 
 /**

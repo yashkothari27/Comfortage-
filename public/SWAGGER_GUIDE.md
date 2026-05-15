@@ -124,7 +124,7 @@ All protected endpoints now work for your session. Token expires after 24 hours 
 
 | Role | Email | Password | What they can do |
 |------|-------|----------|-----------------|
-| **Admin** | `admin@comfortage.health` | `Admin@Comfortage2024!` | Manage users, assign roles |
+| **Admin** | `admin@comfortage.health` | `Admin@Comfortage2024!` | Manage users, assign roles — **cannot submit blockchain records** (no on-chain role) |
 | **Nurse 1** | `sara.johnson@comfortage.health` | `Nurse@Sara2024!` | Store LAB_RESULT, DIAGNOSIS, IMAGING |
 | **Nurse 2** | `miguel.torres@comfortage.health` | `Nurse@Miguel2024!` | Store LAB_RESULT, DIAGNOSIS, IMAGING |
 | **Doctor 1** | `dr.emily.chen@comfortage.health` | `Doctor@Emily2024!` | Validate any record type (on-chain audit) |

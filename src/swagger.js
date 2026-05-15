@@ -622,7 +622,7 @@ const hash = '0x' + require('crypto').createHash('sha256')
                   summary: '🏥 Store clinical diagnosis (Nurse)',
                   value: {
                     datasetId:   'DX-P10042-CKD-20240401',
-                    hash:        '0xa1b2c3d4e5f6789012345678901234567890123456789012345678901234567890',
+                    hash:        '0xa1b2c3d4e5f678901234567890123456789012345678901234567890a1b2c3d4',
                     recordType:  'DIAGNOSIS',
                     metadataCID: 'QmDxCKDP10042',
                   },
@@ -631,7 +631,7 @@ const hash = '0x' + require('crypto').createHash('sha256')
                   summary: '💊 Store prescription (Pharmacist)',
                   value: {
                     datasetId:   'RX-P10042-LISI-20240401',
-                    hash:        '0xb2c3d4e5f67890123456789012345678901234567890123456789012345678901a',
+                    hash:        '0xb2c3d4e5f67890123456789012345678901234567890123456789012b2c3d4e5',
                     recordType:  'PRESCRIPTION',
                     metadataCID: 'QmRxLisinoprilP10042',
                   },
@@ -640,7 +640,7 @@ const hash = '0x' + require('crypto').createHash('sha256')
                   summary: '📋 Store consent form (Consent Manager)',
                   value: {
                     datasetId:   'CONSENT-P10042-FOLLOWUP-20240401',
-                    hash:        '0xc3d4e5f6789012345678901234567890123456789012345678901234567890a1b2',
+                    hash:        '0xc3d4e5f6789012345678901234567890123456789012345678901234c3d4e5f6',
                     recordType:  'CONSENT_FORM',
                     metadataCID: 'QmConsentFollowupP10042',
                   },
@@ -649,7 +649,7 @@ const hash = '0x' + require('crypto').createHash('sha256')
                   summary: '🩻 Store imaging record (Nurse)',
                   value: {
                     datasetId:   'IMG-P10042-MRI-20240401',
-                    hash:        '0xd4e5f678901234567890123456789012345678901234567890123456789012c3d4',
+                    hash:        '0xd4e5f67890123456789012345678901234567890123456789012345678d4e5f6',
                     recordType:  'IMAGING',
                     metadataCID: 'QmMriP10042Apr2024',
                   },

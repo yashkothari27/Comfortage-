@@ -53,14 +53,14 @@ router.post(
     body("metadataCID").optional().isString(),
     validateRequest,
   ],
-  authorizeRole("nurse", "pharmacist", "consent_manager", "admin"),
+  authorizeRole("nurse", "pharmacist", "consent_officer", "consent_manager"),
   authorizeRecordType,
   async (req, res) => {
     try {
       const { datasetId, hash, metadataCID, recordType } = req.body;
       const recordTypeIndex = RECORD_TYPE_INDEX[recordType];
 
-      logger.info(`POST /hash — dataset: ${datasetId}, type: ${recordType}, from: ${req.user?.serviceId} (${req.user?.role})`);
+      logger.info(`POST /hash — dataset: ${datasetId}, type: ${recordType}, from: ${req.user?.email} (${req.user?.role})`);
 
       const privateKey = getUserPrivateKey(req.user.userId);
       const result = await blockchainService.storeHashAs(
@@ -107,7 +107,7 @@ router.get(
   async (req, res) => {
     try {
       const { datasetId } = req.params;
-      logger.info(`GET /hash/${datasetId} — from: ${req.user?.serviceId}`);
+      logger.info(`GET /hash/${datasetId} — from: ${req.user?.email}`);
 
       const exists = await blockchainService.datasetExists(datasetId);
       if (!exists) {
@@ -135,13 +135,13 @@ router.put(
     body("metadataCID").optional().isString(),
     validateRequest,
   ],
-  authorizeRole("nurse", "pharmacist", "consent_manager", "admin"),
+  authorizeRole("nurse", "pharmacist", "consent_officer", "consent_manager"),
   async (req, res) => {
     try {
       const { datasetId } = req.params;
       const { hash, metadataCID } = req.body;
 
-      logger.info(`PUT /hash/${datasetId} — from: ${req.user?.serviceId} (${req.user?.role})`);
+      logger.info(`PUT /hash/${datasetId} — from: ${req.user?.email} (${req.user?.role})`);
 
       const privateKey = getUserPrivateKey(req.user.userId);
       const result = await blockchainService.updateHashAs(privateKey, datasetId, hash, metadataCID || "");
@@ -173,11 +173,11 @@ router.post(
     body("hash").matches(hashRegex),
     validateRequest,
   ],
-  authorizeRole("doctor", "admin"),
+  authorizeRole("doctor"),
   async (req, res) => {
     try {
       const { datasetId, hash } = req.body;
-      logger.info(`POST /hash/validate — dataset: ${datasetId}, validator: ${req.user?.serviceId}`);
+      logger.info(`POST /hash/validate — dataset: ${datasetId}, validator: ${req.user?.email}`);
 
       const privateKey = getUserPrivateKey(req.user.userId);
       const result = await blockchainService.validateHashAs(privateKey, datasetId, hash);
@@ -241,7 +241,7 @@ router.get(
   authorizeRole("auditor", "admin"),
   async (req, res) => {
     try {
-      logger.info(`GET /hash/audit/summary — from: ${req.user?.serviceId}`);
+      logger.info(`GET /hash/audit/summary — from: ${req.user?.email}`);
       const privateKey = getUserPrivateKey(req.user.userId);
       const summary = await blockchainService.getAuditSummaryAs(privateKey);
       res.json({ success: true, data: summary });
