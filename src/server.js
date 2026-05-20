@@ -91,6 +91,7 @@ app.get("/docs", (_req, res) => {
 <div class="swagger-ui-wrap">
   <div class="api-header">
     <img src="/comfortage-logo.svg" alt="COMFORTage Logo">
+    <a href="/cli-guide" style="position:absolute;right:170px;background:#2563eb;color:#fff;padding:8px 18px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">💻 CLI Guide</a>
     <a href="/guide" style="position:absolute;right:24px;background:#e94e1b;color:#fff;padding:8px 18px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">📖 Testing Guide</a>
   </div>
   <div id="swagger-ui"></div>
@@ -111,20 +112,32 @@ app.get("/docs", (_req, res) => {
 </html>`);
 });
 
-// Testing guide rendered from markdown
-app.get("/guide", (_req, res) => {
-  const mdPath = path.join(__dirname, "../public/SWAGGER_GUIDE.md");
+function renderMarkdownPage(title, mdPath, res) {
   const md = fs.existsSync(mdPath) ? fs.readFileSync(mdPath, "utf8") : "Guide not found.";
-  const escaped = md.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   res.setHeader("Content-Type", "text/html");
   res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
-<title>Swagger Testing Guide — COMFORTage</title>
+<title>${title} — COMFORTage</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.1/github-markdown-light.min.css">
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<style>body{background:#f6f8fa;padding:32px} .markdown-body{max-width:900px;margin:0 auto;background:#fff;padding:40px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.1)}</style>
+<style>body{background:#f6f8fa;padding:32px} .markdown-body{max-width:960px;margin:0 auto;background:#fff;padding:40px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.1)}</style>
 </head><body><article class="markdown-body" id="content"></article>
 <script>document.getElementById("content").innerHTML=marked.parse(${JSON.stringify(md)});</script>
 </body></html>`);
+}
+
+// Web UI
+app.get("/app", (_req, res) => {
+  res.sendFile(path.join(__dirname, "../public/app.html"));
+});
+
+// Role-based access guide
+app.get("/guide", (_req, res) => {
+  renderMarkdownPage("Testing Guide", path.join(__dirname, "../public/SWAGGER_GUIDE.md"), res);
+});
+
+// CLI / command-line usage guide
+app.get("/cli-guide", (_req, res) => {
+  renderMarkdownPage("CLI Guide", path.join(__dirname, "../public/CLI_GUIDE.md"), res);
 });
 
 // Swagger JSON endpoint — inject current host so Swagger UI calls the right server

@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COMFORTage T3.3 — Data Integrity Manager</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1e3a5f;--navy-light:#264a78;--navy-dark:#152d4a;
+  --blue:#2563eb;--blue-light:#3b82f6;--blue-hover:#1d4ed8;
+  --teal:#0d9488;--teal-light:#14b8a6;
+  --bg:#f1f5f9;--card:#ffffff;
+  --text:#1e293b;--muted:#64748b;--border:#e2e8f0;
+  --green:#16a34a;--green-bg:#dcfce7;
+  --red:#dc2626;--red-bg:#fee2e2;
+  --amber:#d97706;--amber-bg:#fef3c7;
+  --purple:#7c3aed;--purple-bg:#ede9fe;
+  --radius:10px;--shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+input,select,textarea,button{font-family:inherit}
+
+/* ── LOGIN ── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0d9488 100%)}
+.login-card{background:#fff;border-radius:16px;padding:40px;width:100%;max-width:420px;box-shadow:0 25px 50px rgba(0,0,0,.25)}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.login-logo-icon{width:44px;height:44px;background:var(--blue);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px}
+.login-logo h1{font-size:18px;font-weight:700;color:var(--text);line-height:1.2}
+.login-logo p{font-size:12px;color:var(--muted)}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+.form-group input{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;transition:.15s;outline:none}
+.form-group input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 18px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:.15s;text-decoration:none;white-space:nowrap}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:var(--blue-hover)}
+.btn-secondary{background:var(--border);color:var(--text)}.btn-secondary:hover{background:#cbd5e1}
+.btn-success{background:var(--green);color:#fff}.btn-success:hover{background:#15803d}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:#b91c1c}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}.btn-ghost:hover{background:var(--border)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-full{width:100%}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.demo-accounts{margin-top:24px;border-top:1px solid var(--border);padding-top:20px}
+.demo-accounts p{font-size:12px;color:var(--muted);margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.demo-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.demo-btn{padding:7px 10px;font-size:11px;font-weight:600;border:1.5px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;transition:.15s;color:var(--text);text-align:left}
+.demo-btn:hover{border-color:var(--blue);color:var(--blue);background:#eff6ff}
+.demo-btn span{display:block;font-size:10px;color:var(--muted);font-weight:400}
+
+/* ── APP LAYOUT ── */
+#app{display:none;min-height:100vh;flex-direction:column}
+.app-header{background:var(--navy);color:#fff;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:0;right:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.header-left{display:flex;align-items:center;gap:14px}
+.header-logo{width:32px;height:32px;background:var(--blue);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.header-title{font-size:15px;font-weight:700;letter-spacing:-.3px}
+.header-subtitle{font-size:11px;color:#94a3b8}
+.header-right{display:flex;align-items:center;gap:12px}
+.user-badge{display:flex;align-items:center;gap:8px}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff}
+.user-info{text-align:right}
+.user-name{font-size:13px;font-weight:600;color:#f1f5f9}
+.user-role-badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.role-nurse{background:#be185d;color:#fff}.role-doctor{background:#1d4ed8;color:#fff}
+.role-pharmacist{background:#059669;color:#fff}.role-consent_officer{background:#7c3aed;color:#fff}
+.role-auditor{background:#d97706;color:#fff}.role-admin{background:#dc2626;color:#fff}
+.role-pending{background:#6b7280;color:#fff}
+.btn-logout{background:rgba(255,255,255,.1);color:#e2e8f0;border:1px solid rgba(255,255,255,.2);padding:6px 14px;font-size:12px}
+.btn-logout:hover{background:rgba(255,255,255,.2)}
+
+.app-body{display:flex;margin-top:56px;min-height:calc(100vh - 56px)}
+.sidebar{width:220px;background:var(--navy);position:fixed;top:56px;bottom:0;left:0;overflow-y:auto;padding:16px 0}
+.nav-section{padding:6px 16px;font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-top:8px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;color:#94a3b8;cursor:pointer;transition:.15s;font-size:13px;font-weight:500;border-left:3px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.06);color:#e2e8f0}
+.nav-item.active{background:rgba(37,99,235,.2);color:#60a5fa;border-left-color:var(--blue-light)}
+.nav-item .nav-icon{font-size:16px;width:20px;text-align:center}
+.main-content{margin-left:220px;flex:1;padding:28px;min-height:calc(100vh - 56px)}
+
+/* ── CARDS / LAYOUT ── */
+.page-header{margin-bottom:24px}
+.page-header h2{font-size:22px;font-weight:700;color:var(--text)}
+.page-header p{font-size:14px;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow)}
+.card-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:15px;font-weight:700;color:var(--text)}
+.card-body{padding:20px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:28px}
+.stat-card{background:var(--card);border-radius:var(--radius);padding:20px;border:1px solid var(--border);box-shadow:var(--shadow);display:flex;align-items:center;gap:16px}
+.stat-icon{width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.stat-icon.blue{background:#eff6ff;color:var(--blue)}
+.stat-icon.green{background:var(--green-bg);color:var(--green)}
+.stat-icon.teal{background:#f0fdfa;color:var(--teal)}
+.stat-icon.amber{background:var(--amber-bg);color:var(--amber)}
+.stat-info h3{font-size:24px;font-weight:800;color:var(--text)}
+.stat-info p{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* ── TABLE ── */
+.table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:#f8fafc;padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+tbody tr{border-bottom:1px solid #f1f5f9;transition:.1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#f8fafc}
+tbody td{padding:11px 16px;color:var(--text);vertical-align:middle}
+.mono{font-family:'SF Mono',Monaco,monospace;font-size:11px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:var(--muted)}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.badge-blue{background:#dbeafe;color:#1d4ed8}.badge-green{background:var(--green-bg);color:var(--green)}
+.badge-amber{background:var(--amber-bg);color:var(--amber)}.badge-red{background:var(--red-bg);color:var(--red)}
+.badge-purple{background:var(--purple-bg);color:var(--purple)}.badge-gray{background:#f1f5f9;color:var(--muted)}
+.badge-teal{background:#f0fdfa;color:var(--teal)}
+
+/* ── FORMS ── */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;outline:none;transition:.15s;background:#fff}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.field .hint{font-size:12px;color:var(--muted);margin-top:5px}
+
+/* ── DROP ZONE ── */
+.drop-zone{border:2px dashed var(--border);border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:.2s;background:#fafafa}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--blue);background:#eff6ff}
+.drop-zone .dz-icon{font-size:36px;margin-bottom:10px;color:var(--muted)}
+.drop-zone h4{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px}
+.drop-zone p{font-size:13px;color:var(--muted)}
+.drop-zone.has-file{border-color:var(--green);background:var(--green-bg)}
+.drop-zone.has-file .dz-icon{color:var(--green)}
+#file-input{display:none}
+
+/* ── COLUMN POLICY BUILDER ── */
+.policy-builder{margin-top:20px}
+.policy-builder h4{font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.policy-table{width:100%;border-collapse:collapse;font-size:13px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.policy-table th{background:#f8fafc;padding:9px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+.policy-table td{padding:9px 14px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+.policy-table tr:last-child td{border-bottom:none}
+.policy-table select{padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff;cursor:pointer}
+.col-name{font-weight:600;font-family:'SF Mono',monospace;color:var(--text)}
+.preset-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:14px;width:100%;max-width:700px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 25px 50px rgba(0,0,0,.3)}
+.modal-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-header h3{font-size:17px;font-weight:700}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);padding:4px;border-radius:4px;line-height:1}
+.modal-close:hover{background:var(--border);color:var(--text)}
+.modal-body{padding:24px;overflow-y:auto;flex:1}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0}
+
+/* ── DATA VIEWER TABLE ── */
+.data-viewer{overflow-x:auto}
+.data-viewer table{font-size:12px}
+.data-viewer th.restricted{background:#fee2e2;color:var(--red)}
+.data-viewer td.restricted-col{background:#fff5f5;color:#fca5a5;font-style:italic}
+.col-access-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.col-open{background:var(--green)}.col-locked{background:var(--red)}
+
+/* ── MISC ── */
+.alert{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px}
+.alert-info{background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8}
+.alert-success{background:var(--green-bg);border:1px solid #bbf7d0;color:var(--green)}
+.alert-error{background:var(--red-bg);border:1px solid #fecaca;color:var(--red)}
+.alert-warning{background:var(--amber-bg);border:1px solid #fde68a;color:var(--amber)}
+.empty-state{text-align:center;padding:48px 20px;color:var(--muted)}
+.empty-state .empty-icon{font-size:48px;margin-bottom:12px}
+.empty-state h3{font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+.spinner-dark{border-color:rgba(0,0,0,.1);border-top-color:var(--blue)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast-container{position:fixed;top:68px;right:20px;z-index:300;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;color:#fff;box-shadow:var(--shadow-md);animation:slideIn .3s ease;pointer-events:auto;max-width:360px}
+.toast-success{background:var(--green)}.toast-error{background:var(--red)}.toast-info{background:var(--blue)}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.link{color:var(--blue);text-decoration:none;font-size:12px}.link:hover{text-decoration:underline}
+.text-sm{font-size:12px}.text-muted{color:var(--muted)}.text-mono{font-family:monospace;font-size:11px}
+.mt-4{margin-top:16px}.mt-6{margin-top:24px}.mb-4{margin-bottom:16px}
+.flex{display:flex}.items-center{align-items:center}.gap-2{gap:8px}.gap-3{gap:12px}.justify-between{justify-content:space-between}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.detail-row{display:flex;padding:10px 0;border-bottom:1px solid #f1f5f9;gap:12px}
+.detail-row:last-child{border:none}
+.detail-label{font-size:12px;font-weight:600;color:var(--muted);width:140px;flex-shrink:0;padding-top:2px}
+.detail-value{font-size:13px;color:var(--text);word-break:break-all}
+.progress{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:8px}
+.progress-bar{height:100%;background:var(--blue);border-radius:2px;transition:width .3s}
+</style>
+</head>
+<body>
+
+<!-- ── TOAST CONTAINER ── -->
+<div class="toast-container" id="toasts"></div>
+
+<!-- ══════════════════════════════════════════════════════════
+     LOGIN SCREEN
+════════════════════════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">🔐</div>
+      <div>
+        <h1>COMFORTage T3.3</h1>
+        <p>Blockchain Data Integrity Service</p>
+      </div>
+    </div>
+    <div id="login-error" class="alert alert-error" style="display:none"></div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="user@comfortage.health" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary btn-full" id="login-btn" onclick="doLogin()">Sign In</button>
+    <div class="demo-accounts">
+      <p>Quick login — test accounts</p>
+      <div class="demo-grid">
+        <button class="demo-btn" onclick="quickLogin('sara.johnson@comfortage.health','Nurse@Sara2024!')">🏥 Sara Johnson<span>Nurse</span></button>
+        <button class="demo-btn" onclick="quickLogin('dr.emily.chen@comfortage.health','Doctor@Emily2024!')">🩺 Dr. Emily Chen<span>Doctor</span></button>
+        <button class="demo-btn" onclick="quickLogin('anna.schmidt@comfortage.health','Pharma@Anna2024!')">💊 Anna Schmidt<span>Pharmacist</span></button>
+        <button class="demo-btn" onclick="quickLogin('sofia.russo@comfortage.health','Consent@Sofia2024!')">📋 Sofia Russo<span>Consent Officer</span></button>
+        <button class="demo-btn" onclick="quickLogin('claire.dubois@comfortage.health','Audit@Claire2024!')">🔍 Claire Dubois<span>Auditor</span></button>
+        <button class="demo-btn" onclick="quickLogin('admin@comfortage.health','Admin@Comfortage2024!')">⚙️ System Admin<span>Admin</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     MAIN APP
+════════════════════════════════════════════════════════════ -->
+<div id="app">
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="header-logo">🔐</div>
+      <div>
+        <div class="header-title">COMFORTage T3.3</div>
+        <div class="header-subtitle">Reltime Mainnet · Chain 32323</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="user-badge">
+        <div class="user-info">
+          <div class="user-name" id="hdr-name">—</div>
+          <div style="display:flex;justify-content:flex-end"><span class="user-role-badge" id="hdr-role">—</span></div>
+        </div>
+        <div class="user-avatar" id="hdr-avatar">?</div>
+      </div>
+      <button class="btn btn-logout" onclick="logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="app-body">
+    <!-- SIDEBAR -->
+    <nav class="sidebar" id="sidebar">
+      <div class="nav-section">Main</div>
+      <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')"><span class="nav-icon">📊</span> Dashboard</div>
+      <div class="nav-item" data-page="upload" onclick="navigate('upload')" id="nav-upload"><span class="nav-icon">⬆️</span> Upload File</div>
+      <div class="nav-section">Data</div>
+      <div class="nav-item" data-page="datasets" onclick="navigate('datasets')"><span class="nav-icon">📁</span> Browse Datasets</div>
+      <div class="nav-item" data-page="check" onclick="navigate('check')"><span class="nav-icon">🔍</span> Check Integrity</div>
+      <div class="nav-item" data-page="validate" onclick="navigate('validate')" id="nav-validate"><span class="nav-icon">✅</span> Validate Hash</div>
+      <div class="nav-section">Admin</div>
+      <div class="nav-item" data-page="audit" onclick="navigate('audit')" id="nav-audit"><span class="nav-icon">📋</span> Audit Summary</div>
+      <div class="nav-item" data-page="users" onclick="navigate('users')" id="nav-users"><span class="nav-icon">👥</span> Users</div>
+    </nav>
+
+    <!-- MAIN -->
+    <main class="main-content" id="main-content">
+      <div class="empty-state"><div class="spinner spinner-dark"></div></div>
+    </main>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     MODALS
+════════════════════════════════════════════════════════════ -->
+<!-- Dataset Detail Modal -->
+<div class="modal-overlay" id="modal-detail">
+  <div class="modal" style="max-width:780px">
+    <div class="modal-header">
+      <h3 id="modal-detail-title">Dataset Details</h3>
+      <button class="modal-close" onclick="closeModal('modal-detail')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-detail-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-detail')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Data Viewer Modal -->
+<div class="modal-overlay" id="modal-data">
+  <div class="modal" style="max-width:960px">
+    <div class="modal-header">
+      <h3 id="modal-data-title">Data Viewer</h3>
+      <button class="modal-close" onclick="closeModal('modal-data')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-data-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-data')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- History Modal -->
+<div class="modal-overlay" id="modal-history">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Version History</h3>
+      <button class="modal-close" onclick="closeModal('modal-history')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-history-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-history')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Update Hash Modal -->
+<div class="modal-overlay" id="modal-update">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h3>Update Hash</h3>
+      <button class="modal-close" onclick="closeModal('modal-update')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-warning">Updating replaces the on-chain hash. The old hash is preserved in history.</div>
+      <div class="field">
+        <label>New SHA-256 Hash</label>
+        <input type="text" id="update-hash-input" placeholder="0x64-char hex...">
+      </div>
+      <div class="field">
+        <label>Metadata CID (optional)</label>
+        <input type="text" id="update-cid-input" placeholder="Qm...">
+      </div>
+      <input type="hidden" id="update-dataset-id">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-update')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="submitUpdate()">Update On-Chain</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+const BASE = '';
+let state = { token: null, user: null, page: 'dashboard', uploadedCSVHeaders: [] };
+
+const ROLE_COLORS = { nurse:'role-nurse', doctor:'role-doctor', pharmacist:'role-pharmacist', consent_officer:'role-consent_officer', auditor:'role-auditor', admin:'role-admin', pending:'role-pending' };
+const RECORD_TYPE_BADGE = { LAB_RESULT:'badge-blue', DIAGNOSIS:'badge-purple', PRESCRIPTION:'badge-green', CONSENT_FORM:'badge-teal', IMAGING:'badge-amber' };
+
+const CAN_UPLOAD = ['nurse','pharmacist','consent_officer'];
+const CAN_VALIDATE = ['doctor'];
+const CAN_AUDIT = ['auditor','admin'];
+const CAN_ADMIN = ['admin'];
+const UPLOAD_RECORD_TYPES = {
+  nurse: ['LAB_RESULT','DIAGNOSIS','IMAGING'],
+  pharmacist: ['PRESCRIPTION'],
+  consent_officer: ['CONSENT_FORM'],
+};
+
+// ══════════════════════════════════════════════════════
+// API HELPER
+// ══════════════════════════════════════════════════════
+async function api(method, path, body, isForm) {
+  const opts = { method, headers: { Authorization: `Bearer ${state.token}` } };
+  if (isForm) { opts.body = body; }
+  else if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  const r = await fetch(BASE + path, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || data.message || `HTTP ${r.status}`);
+  return data;
+}
+
+// ══════════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════════
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-error');
+  err.style.display = 'none';
+  if (!email || !password) { showErr(err, 'Enter email and password.'); return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Signing in…';
+  try {
+    const r = await fetch(BASE + '/api/v1/auth/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email, password })
+    });
+    const data = await r.json();
+    if (!r.ok) { showErr(err, data.error || 'Login failed'); btn.disabled=false; btn.textContent='Sign In'; return; }
+    state.token = data.token;
+    state.user = data.user || decodeJWT(data.token);
+    localStorage.setItem('comfortage_token', data.token);
+    startApp();
+  } catch(e) { showErr(err, e.message); btn.disabled=false; btn.textContent='Sign In'; }
+}
+
+function quickLogin(email, password) {
+  document.getElementById('login-email').value = email;
+  document.getElementById('login-password').value = password;
+  doLogin();
+}
+
+function logout() {
+  localStorage.removeItem('comfortage_token');
+  state = { token:null, user:null, page:'dashboard', uploadedCSVHeaders:[] };
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-password').value = '';
+}
+
+function decodeJWT(token) {
+  try { return JSON.parse(atob(token.split('.')[1])); } catch { return {}; }
+}
+
+function showErr(el, msg) { el.textContent = msg; el.style.display = 'flex'; }
+
+// ══════════════════════════════════════════════════════
+// APP START
+// ══════════════════════════════════════════════════════
+function startApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  const u = state.user;
+  document.getElementById('hdr-name').textContent = u.email?.split('@')[0] || 'User';
+  const roleEl = document.getElementById('hdr-role');
+  roleEl.textContent = u.role || '—';
+  roleEl.className = 'user-role-badge ' + (ROLE_COLORS[u.role] || 'role-pending');
+  document.getElementById('hdr-avatar').textContent = (u.email || '?')[0].toUpperCase();
+  // Show/hide nav items
+  document.getElementById('nav-upload').style.display = CAN_UPLOAD.includes(u.role) ? 'flex' : 'none';
+  document.getElementById('nav-validate').style.display = CAN_VALIDATE.includes(u.role) ? 'flex' : 'none';
+  document.getElementById('nav-audit').style.display = CAN_AUDIT.includes(u.role) ? 'flex' : 'none';
+  document.getElementById('nav-users').style.display = CAN_ADMIN.includes(u.role) ? 'flex' : 'none';
+  navigate('dashboard');
+}
+
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('comfortage_token');
+  if (saved) {
+    const decoded = decodeJWT(saved);
+    if (decoded.exp && decoded.exp * 1000 > Date.now()) {
+      state.token = saved; state.user = decoded; startApp(); return;
+    }
+  }
+  document.getElementById('login-screen').style.display = 'flex';
+});
+
+document.getElementById('login-password').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+// ══════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════
+function navigate(page) {
+  state.page = page;
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.page === page);
+  });
+  const pages = { dashboard:renderDashboard, upload:renderUpload, datasets:renderDatasets, check:renderCheck, validate:renderValidate, audit:renderAudit, users:renderUsers };
+  (pages[page] || renderDashboard)();
+}
+
+function setMain(html) { document.getElementById('main-content').innerHTML = html; }
+
+// ══════════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════════
+function toast(msg, type='success') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+// ══════════════════════════════════════════════════════
+// MODALS
+// ══════════════════════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ══════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════
+async function renderDashboard() {
+  const role = state.user?.role;
+  setMain(`
+    <div class="page-header">
+      <h2>Dashboard</h2>
+      <p>Welcome back. Reltime Mainnet · Chain ID 32323</p>
+    </div>
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card"><div class="stat-icon blue">🔗</div><div class="stat-info"><h3>—</h3><p>Total On-Chain Records</p></div></div>
+      <div class="stat-card"><div class="stat-icon teal">📦</div><div class="stat-info"><h3>—</h3><p>IPFS Files Stored</p></div></div>
+      <div class="stat-card"><div class="stat-icon green">✅</div><div class="stat-info"><h3>Live</h3><p>Blockchain Status</p></div></div>
+      <div class="stat-card"><div class="stat-icon amber">🔐</div><div class="stat-info"><h3>${role || '—'}</h3><p>Your Access Role</p></div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Quick Actions</span></div>
+      <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap">
+        ${CAN_UPLOAD.includes(role) ? `<button class="btn btn-primary" onclick="navigate('upload')">⬆️ Upload File</button>` : ''}
+        <button class="btn btn-secondary" onclick="navigate('datasets')">📁 Browse Datasets</button>
+        <button class="btn btn-secondary" onclick="navigate('check')">🔍 Verify Integrity</button>
+        ${CAN_VALIDATE.includes(role) ? `<button class="btn btn-secondary" onclick="navigate('validate')">✅ Validate Hash</button>` : ''}
+        ${CAN_AUDIT.includes(role) ? `<button class="btn btn-secondary" onclick="navigate('audit')">📋 Audit Summary</button>` : ''}
+      </div>
+    </div>
+    <div class="card mt-6">
+      <div class="card-header"><span class="card-title">Your Role Permissions</span></div>
+      <div class="card-body" id="role-perms"></div>
+    </div>
+  `);
+  renderRolePermissions();
+}
+
+function renderRolePermissions() {
+  const role = state.user?.role;
+  const perms = {
+    nurse: { can: ['Upload LAB_RESULT, DIAGNOSIS, IMAGING files', 'Browse & view all datasets', 'Check file integrity', 'View IPFS files (filtered by policy)'], cannot: ['Upload PRESCRIPTION or CONSENT_FORM', 'Validate hashes', 'View audit summary', 'Manage users'] },
+    doctor: { can: ['Browse & view all datasets', 'Validate hash integrity (on-chain audit event)', 'View full data including restricted columns', 'Check file integrity'], cannot: ['Upload files', 'View audit summary', 'Manage users'] },
+    pharmacist: { can: ['Upload PRESCRIPTION files', 'Browse & view all datasets', 'Check file integrity', 'View prescription data'], cannot: ['Upload other record types', 'Validate hashes', 'View audit summary', 'Manage users'] },
+    consent_officer: { can: ['Upload CONSENT_FORM files', 'Browse & view all datasets', 'Check file integrity', 'View consent data'], cannot: ['Upload other record types', 'Validate hashes', 'Manage users'] },
+    auditor: { can: ['Browse & view all datasets', 'View audit summary & compliance counts', 'Check file integrity', 'Access full audit trail'], cannot: ['Upload files', 'Validate hashes', 'Manage users'] },
+    admin: { can: ['Manage all users & roles', 'View audit summary', 'Browse all datasets', 'Check integrity', 'Full system access'], cannot: ['Upload/write blockchain records (no on-chain role)'] },
+  };
+  const p = perms[role] || { can:[], cannot:['No permissions configured'] };
+  document.getElementById('role-perms').innerHTML = `
+    <div class="grid-2">
+      <div>
+        <p style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:8px">✅ You can</p>
+        ${p.can.map(x => `<p style="font-size:13px;padding:4px 0;color:var(--text)">• ${x}</p>`).join('')}
+      </div>
+      <div>
+        <p style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:8px">🚫 Restricted from</p>
+        ${p.cannot.map(x => `<p style="font-size:13px;padding:4px 0;color:var(--muted)">• ${x}</p>`).join('')}
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// UPLOAD
+// ══════════════════════════════════════════════════════
+function renderUpload() {
+  const role = state.user?.role;
+  const types = UPLOAD_RECORD_TYPES[role] || [];
+  setMain(`
+    <div class="page-header">
+      <h2>Upload File</h2>
+      <p>Upload a medical record to IPFS and anchor its hash on the Reltime blockchain.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 420px;gap:24px;align-items:start">
+      <div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">File & Record Details</span></div>
+          <div class="card-body">
+            <div id="upload-alert"></div>
+            <div class="field">
+              <label>Dataset ID <span style="color:var(--red)">*</span></label>
+              <input type="text" id="up-dataset-id" placeholder="e.g. MFU-7-VITALS-001">
+              <div class="hint">Unique identifier for this record. Cannot be changed after upload.</div>
+            </div>
+            <div class="form-row">
+              <div class="field">
+                <label>Record Type <span style="color:var(--red)">*</span></label>
+                <select id="up-record-type">
+                  ${types.map(t => `<option value="${t}">${t.replace('_',' ')}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label>File <span style="color:var(--red)">*</span></label>
+              <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()" ondragover="dzDrag(event)" ondragleave="dzLeave()" ondrop="dzDrop(event)">
+                <div class="dz-icon" id="dz-icon">📄</div>
+                <h4 id="dz-title">Click or drag file here</h4>
+                <p id="dz-sub">PDF, Word, DICOM, PNG, JPG, CSV — max 4 MB</p>
+              </div>
+              <input type="file" id="file-input" onchange="fileSelected(this.files[0])">
+            </div>
+            <div id="policy-section" style="display:none">
+              <div class="policy-builder">
+                <h4>🔒 Column Access Policy <span style="font-size:11px;color:var(--muted);font-weight:400">(CSV detected — set per-column permissions)</span></h4>
+                <div class="alert alert-info" style="margin-bottom:12px">Columns not restricted here will be visible to <strong>all roles</strong>. Admin always sees everything.</div>
+                <table class="policy-table" id="policy-table">
+                  <thead><tr><th>Column Name</th><th>Access Level</th><th>Allowed Roles</th></tr></thead>
+                  <tbody id="policy-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+            <div style="margin-top:20px">
+              <button class="btn btn-primary" id="up-btn" onclick="submitUpload()">⬆️ Upload to IPFS + Blockchain</button>
+            </div>
+            <div id="up-progress" style="display:none;margin-top:16px">
+              <p id="up-step" style="font-size:13px;color:var(--muted);margin-bottom:6px">Uploading…</p>
+              <div class="progress"><div class="progress-bar" id="up-bar" style="width:0%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">ℹ️ How it works</span></div>
+          <div class="card-body">
+            <div style="display:flex;flex-direction:column;gap:14px">
+              ${[
+                ['1','SHA-256 computed','Your file is hashed client-side (browser) before upload.'],
+                ['2','IPFS upload','File is pinned to IPFS via Pinata. You get a permanent CID.'],
+                ['3','Column policy','If CSV, your access rules are stored as a separate JSON on IPFS.'],
+                ['4','Blockchain anchor','The hash + CID is stored on Reltime Mainnet. Immutable proof.'],
+              ].map(([n,t,d]) => `<div style="display:flex;gap:12px"><div style="width:24px;height:24px;border-radius:50%;background:var(--blue);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${n}</div><div><p style="font-size:13px;font-weight:600;color:var(--text)">${t}</p><p style="font-size:12px;color:var(--muted)">${d}</p></div></div>`).join('')}
+            </div>
+          </div>
+        </div>
+        <div class="card mt-4" id="up-result" style="display:none">
+          <div class="card-header"><span class="card-title">✅ Upload Result</span></div>
+          <div class="card-body" id="up-result-body"></div>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
+let selectedFile = null;
+
+function dzDrag(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('dragover'); }
+function dzLeave() { document.getElementById('drop-zone').classList.remove('dragover'); }
+function dzDrop(e) { e.preventDefault(); dzLeave(); const f = e.dataTransfer.files[0]; if(f) fileSelected(f); }
+
+function fileSelected(file) {
+  if (!file) return;
+  if (file.size > 4*1024*1024) { toast('File too large (max 4 MB)', 'error'); return; }
+  selectedFile = file;
+  const dz = document.getElementById('drop-zone');
+  dz.classList.add('has-file');
+  document.getElementById('dz-icon').textContent = fileIcon(file.name);
+  document.getElementById('dz-title').textContent = file.name;
+  document.getElementById('dz-sub').textContent = `${(file.size/1024).toFixed(1)} KB · ${file.type || 'unknown type'}`;
+  if (file.name.endsWith('.csv') || file.type === 'text/csv') {
+    readCSVHeaders(file);
+  } else {
+    document.getElementById('policy-section').style.display = 'none';
+  }
+}
+
+function fileIcon(name) {
+  if (name.match(/\.(pdf)$/i)) return '📕';
+  if (name.match(/\.(csv|xlsx|xls)$/i)) return '📊';
+  if (name.match(/\.(png|jpg|jpeg|dicom|dcm)$/i)) return '🖼️';
+  if (name.match(/\.(doc|docx)$/i)) return '📝';
+  return '📄';
+}
+
+function readCSVHeaders(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const firstLine = e.target.result.split(/\r?\n/)[0];
+    const headers = firstLine.split(',').map(h => h.trim().replace(/^"|"$/g,''));
+    state.uploadedCSVHeaders = headers;
+    buildPolicyTable(headers);
+    document.getElementById('policy-section').style.display = 'block';
+  };
+  reader.readAsText(file);
+}
+
+const POLICY_PRESETS = [
+  { label:'🔓 Everyone', value:'*', desc:'All roles can see this column' },
+  { label:'🩺 Doctors only', value:'doctor,admin', desc:'Doctors and admins only' },
+  { label:'💊 Doctors + Pharma', value:'doctor,pharmacist,admin', desc:'Clinical prescribers' },
+  { label:'🏥 Clinical staff', value:'doctor,nurse,pharmacist,admin', desc:'All clinical roles' },
+  { label:'📋 Consent + Admin', value:'consent_officer,admin', desc:'Consent management' },
+  { label:'🔐 Admin only', value:'admin', desc:'Restricted — admin only' },
+];
+
+function buildPolicyTable(headers) {
+  const tbody = document.getElementById('policy-tbody');
+  tbody.innerHTML = headers.map(col => `
+    <tr>
+      <td><span class="col-name">${col}</span></td>
+      <td>
+        <select id="policy-${col}" onchange="updatePolicyRow('${col}')">
+          ${POLICY_PRESETS.map((p,i) => `<option value="${p.value}" ${i===0?'selected':''}>${p.label}</option>`).join('')}
+        </select>
+      </td>
+      <td id="policy-desc-${col}" style="font-size:11px;color:var(--muted)">${POLICY_PRESETS[0].desc}</td>
+    </tr>`).join('');
+}
+
+function updatePolicyRow(col) {
+  const val = document.getElementById(`policy-${col}`).value;
+  const preset = POLICY_PRESETS.find(p => p.value === val);
+  document.getElementById(`policy-desc-${col}`).textContent = preset?.desc || '';
+}
+
+function buildColumnPolicy() {
+  const headers = state.uploadedCSVHeaders;
+  if (!headers.length) return null;
+  const policy = {};
+  let hasRestriction = false;
+  headers.forEach(col => {
+    const el = document.getElementById(`policy-${col}`);
+    if (!el) return;
+    const val = el.value;
+    if (val === '*') return; // no restriction = everyone = don't include
+    policy[col] = val.split(',');
+    hasRestriction = true;
+  });
+  return hasRestriction ? policy : null;
+}
+
+async function submitUpload() {
+  const datasetId = document.getElementById('up-dataset-id').value.trim();
+  const recordType = document.getElementById('up-record-type').value;
+  const alertEl = document.getElementById('upload-alert');
+  alertEl.innerHTML = '';
+  if (!datasetId) { alertEl.innerHTML = '<div class="alert alert-error">Dataset ID is required.</div>'; return; }
+  if (!selectedFile) { alertEl.innerHTML = '<div class="alert alert-error">Please select a file.</div>'; return; }
+  const btn = document.getElementById('up-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Processing…';
+  const progress = document.getElementById('up-progress');
+  const step = document.getElementById('up-step');
+  const bar = document.getElementById('up-bar');
+  progress.style.display = 'block';
+  try {
+    step.textContent = 'Step 1/3 — Computing SHA-256 hash…'; bar.style.width = '20%';
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('datasetId', datasetId);
+    formData.append('recordType', recordType);
+    const policy = buildColumnPolicy();
+    if (policy) formData.append('columnPolicy', JSON.stringify(policy));
+    step.textContent = 'Step 2/3 — Uploading to IPFS (Pinata)…'; bar.style.width = '50%';
+    const result = await api('POST', '/api/v1/hash/upload', formData, true);
+    step.textContent = 'Step 3/3 — Anchoring on Reltime blockchain…'; bar.style.width = '90%';
+    await new Promise(r => setTimeout(r, 400));
+    bar.style.width = '100%';
+    step.textContent = '✅ Complete!';
+    toast(`Uploaded! Block ${result.data?.blockNumber}`, 'success');
+    const d = result.data;
+    document.getElementById('up-result').style.display = 'block';
+    document.getElementById('up-result-body').innerHTML = `
+      <div class="detail-row"><div class="detail-label">Dataset ID</div><div class="detail-value"><strong>${d.datasetId}</strong></div></div>
+      <div class="detail-row"><div class="detail-label">Record Type</div><div class="detail-value"><span class="badge ${RECORD_TYPE_BADGE[d.recordType]||'badge-gray'}">${d.recordType}</span></div></div>
+      <div class="detail-row"><div class="detail-label">File</div><div class="detail-value">${d.filename} (${(d.sizeBytes/1024).toFixed(1)} KB)</div></div>
+      <div class="detail-row"><div class="detail-label">SHA-256 Hash</div><div class="detail-value"><span class="mono">${d.hash}</span></div></div>
+      <div class="detail-row"><div class="detail-label">File CID</div><div class="detail-value"><a class="link" href="${d.ipfsUrl}" target="_blank">🔗 ${d.fileCid?.slice(0,20)}…</a></div></div>
+      ${d.policyCid ? `<div class="detail-row"><div class="detail-label">Policy CID</div><div class="detail-value"><span class="mono">${d.policyCid?.slice(0,20)}…</span> <span class="badge badge-purple">Column Policy</span></div></div>` : ''}
+      <div class="detail-row"><div class="detail-label">Transaction</div><div class="detail-value"><span class="mono">${d.transactionHash?.slice(0,20)}…</span></div></div>
+      <div class="detail-row"><div class="detail-label">Block Number</div><div class="detail-value">${d.blockNumber}</div></div>
+      <div class="detail-row"><div class="detail-label">Status</div><div class="detail-value"><span class="badge badge-green">${d.status}</span></div></div>`;
+    // Reset
+    selectedFile = null;
+    document.getElementById('up-dataset-id').value = '';
+    document.getElementById('drop-zone').className = 'drop-zone';
+    document.getElementById('dz-icon').textContent = '📄';
+    document.getElementById('dz-title').textContent = 'Click or drag file here';
+    document.getElementById('dz-sub').textContent = 'PDF, Word, DICOM, PNG, JPG, CSV — max 4 MB';
+    document.getElementById('policy-section').style.display = 'none';
+    state.uploadedCSVHeaders = [];
+  } catch(e) {
+    alertEl.innerHTML = `<div class="alert alert-error">❌ ${e.message}</div>`;
+    step.textContent = 'Upload failed.';
+  } finally {
+    btn.disabled = false; btn.innerHTML = '⬆️ Upload to IPFS + Blockchain';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// DATASETS BROWSER
+// ══════════════════════════════════════════════════════
+function renderDatasets() {
+  setMain(`
+    <div class="page-header">
+      <h2>Browse Datasets</h2>
+      <p>Look up any dataset by ID to view its on-chain record, IPFS file, and version history.</p>
+    </div>
+    <div class="card mb-4">
+      <div class="card-body" style="display:flex;gap:10px">
+        <input type="text" id="ds-search" placeholder="Enter Dataset ID (e.g. MFU-7-VITALS-001)" style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;outline:none" onkeydown="if(e.key==='Enter')lookupDataset()">
+        <button class="btn btn-primary" onclick="lookupDataset()">🔍 Look Up</button>
+      </div>
+    </div>
+    <div id="ds-result"></div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Example Dataset IDs to Try</span></div>
+      <div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap">
+        ${['MFU-7-VITALS-TEST-001','DATASET-UPLOAD-TEST'].map(id => `<button class="btn btn-ghost btn-sm" onclick="document.getElementById('ds-search').value='${id}';lookupDataset()">${id}</button>`).join('')}
+      </div>
+    </div>
+  `);
+  // fix keydown reference
+  document.getElementById('ds-search').addEventListener('keydown', e => { if(e.key==='Enter') lookupDataset(); });
+}
+
+async function lookupDataset() {
+  const id = document.getElementById('ds-search').value.trim();
+  if (!id) { toast('Enter a dataset ID', 'error'); return; }
+  const el = document.getElementById('ds-result');
+  el.innerHTML = '<div class="card mb-4"><div class="card-body" style="text-align:center;padding:32px"><div class="spinner spinner-dark"></div><p style="margin-top:12px;color:var(--muted);font-size:13px">Fetching from blockchain…</p></div></div>';
+  try {
+    const data = await api('GET', `/api/v1/hash/${encodeURIComponent(id)}`);
+    const d = data.data;
+    el.innerHTML = `
+      <div class="card mb-4">
+        <div class="card-header">
+          <span class="card-title">📦 ${id}</span>
+          <div class="flex gap-2">
+            <button class="btn btn-ghost btn-sm" onclick="viewHistory('${id}')">📜 History</button>
+            <button class="btn btn-secondary btn-sm" onclick="viewData('${id}')">👁️ View Data</button>
+            ${CAN_UPLOAD.includes(state.user?.role) ? `<button class="btn btn-ghost btn-sm" onclick="openUpdateModal('${id}')">✏️ Update</button>` : ''}
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="detail-row"><div class="detail-label">Dataset ID</div><div class="detail-value"><strong>${d.datasetId || id}</strong></div></div>
+          <div class="detail-row"><div class="detail-label">Record Type</div><div class="detail-value"><span class="badge ${RECORD_TYPE_BADGE[d.recordType]||'badge-gray'}">${d.recordType||'—'}</span></div></div>
+          <div class="detail-row"><div class="detail-label">SHA-256 Hash</div><div class="detail-value"><span class="mono">${d.hash||d.dataHash||'—'}</span></div></div>
+          <div class="detail-row"><div class="detail-label">Metadata CID</div><div class="detail-value">
+            ${d.metadataCID ? `<span class="mono">${d.metadataCID}</span>
+            <a class="link" style="margin-left:8px" href="https://ipfs.io/ipfs/${d.metadataCID}" target="_blank">🔗 IPFS</a>` : '<span style="color:var(--muted)">None</span>'}
+          </div></div>
+          <div class="detail-row"><div class="detail-label">Timestamp</div><div class="detail-value">${d.timestamp ? new Date(d.timestamp*1000).toLocaleString() : '—'}</div></div>
+          <div class="detail-row"><div class="detail-label">Uploader</div><div class="detail-value"><span class="mono">${d.uploader||'—'}</span></div></div>
+          <div class="detail-row"><div class="detail-label">Record Type #</div><div class="detail-value">${d.recordTypeIndex ?? '—'}</div></div>
+        </div>
+      </div>`;
+  } catch(e) {
+    el.innerHTML = `<div class="alert alert-error">❌ ${e.message}</div>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// VIEW DATA (role-filtered)
+// ══════════════════════════════════════════════════════
+async function viewData(datasetId) {
+  document.getElementById('modal-data-title').textContent = `Data Viewer — ${datasetId}`;
+  document.getElementById('modal-data-body').innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner spinner-dark"></div><p style="margin-top:12px;color:var(--muted);font-size:13px">Fetching from IPFS…</p></div>';
+  openModal('modal-data');
+  try {
+    const r = await fetch(BASE + `/api/v1/hash/${encodeURIComponent(datasetId)}/data`, {
+      headers: { Authorization: `Bearer ${state.token}` }
+    });
+    const ct = r.headers.get('content-type') || '';
+    if (ct.includes('json')) {
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+      const d = data.data;
+      if (d.rows) {
+        // CSV with policy
+        const role = state.user?.role;
+        const allCols = [...(d.visibleColumns||[]), ...(d.restrictedColumns||[])];
+        document.getElementById('modal-data-body').innerHTML = `
+          <div class="flex gap-2 mb-4" style="flex-wrap:wrap">
+            <span class="badge badge-blue">Role: ${role}</span>
+            <span class="badge badge-green">✅ ${d.visibleColumns?.length||0} columns visible</span>
+            ${d.restrictedColumns?.length ? `<span class="badge badge-red">🔒 ${d.restrictedColumns.length} restricted</span>` : ''}
+            <span class="badge badge-gray">${d.rows?.length||0} rows</span>
+          </div>
+          <div class="data-viewer">
+            <table>
+              <thead><tr>
+                ${(d.visibleColumns||[]).map(c => `<th><span class="col-access-dot col-open"></span>${c}</th>`).join('')}
+                ${(d.restrictedColumns||[]).map(c => `<th class="restricted"><span class="col-access-dot col-locked"></span>${c} 🔒</th>`).join('')}
+              </tr></thead>
+              <tbody>
+                ${(d.rows||[]).map(row => `<tr>
+                  ${(d.visibleColumns||[]).map(c => `<td>${row[c]??''}</td>`).join('')}
+                  ${(d.restrictedColumns||[]).map(() => `<td class="restricted-col">— restricted —</td>`).join('')}
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="alert alert-info mt-4">🔒 Restricted columns are shown as placeholders. Log in as <strong>doctor</strong> to see all columns.</div>`;
+      } else {
+        document.getElementById('modal-data-body').innerHTML = `<pre style="font-size:12px;overflow:auto;white-space:pre-wrap">${JSON.stringify(d,null,2)}</pre>`;
+      }
+    } else {
+      const text = await r.text();
+      document.getElementById('modal-data-body').innerHTML = `<pre style="font-size:12px;overflow:auto;background:#f8fafc;padding:16px;border-radius:8px;max-height:400px">${escHtml(text)}</pre>`;
+    }
+  } catch(e) {
+    document.getElementById('modal-data-body').innerHTML = `<div class="alert alert-error">❌ ${e.message}</div>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// VERSION HISTORY
+// ══════════════════════════════════════════════════════
+async function viewHistory(datasetId) {
+  document.getElementById('modal-history-body').innerHTML = '<div style="text-align:center;padding:32px"><div class="spinner spinner-dark"></div></div>';
+  openModal('modal-history');
+  try {
+    const data = await api('GET', `/api/v1/hash/history/${encodeURIComponent(datasetId)}`);
+    const history = data.data?.history || data.data || [];
+    if (!history.length) {
+      document.getElementById('modal-history-body').innerHTML = '<div class="empty-state"><div class="empty-icon">📜</div><h3>No history found</h3><p>This dataset has not been updated.</p></div>';
+      return;
+    }
+    document.getElementById('modal-history-body').innerHTML = `
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Version history for <strong>${datasetId}</strong></p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Version</th><th>Hash</th><th>Timestamp</th><th>Uploader</th></tr></thead>
+          <tbody>${history.map((h,i) => `<tr>
+            <td><span class="badge ${i===0?'badge-green':'badge-gray'}">v${history.length-i}</span></td>
+            <td><span class="mono">${(h.hash||h.dataHash||'').slice(0,22)}…</span></td>
+            <td>${h.timestamp ? new Date(h.timestamp*1000).toLocaleString() : '—'}</td>
+            <td><span class="mono">${(h.uploader||'').slice(0,10)}…</span></td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>`;
+  } catch(e) {
+    document.getElementById('modal-history-body').innerHTML = `<div class="alert alert-error">❌ ${e.message}</div>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// UPDATE HASH
+// ══════════════════════════════════════════════════════
+function openUpdateModal(datasetId) {
+  document.getElementById('update-dataset-id').value = datasetId;
+  document.getElementById('update-hash-input').value = '';
+  document.getElementById('update-cid-input').value = '';
+  openModal('modal-update');
+}
+
+async function submitUpdate() {
+  const datasetId = document.getElementById('update-dataset-id').value;
+  const hash = document.getElementById('update-hash-input').value.trim();
+  const metadataCID = document.getElementById('update-cid-input').value.trim();
+  if (!hash) { toast('Hash is required', 'error'); return; }
+  try {
+    await api('PUT', `/api/v1/hash/${encodeURIComponent(datasetId)}`, { hash, metadataCID });
+    toast('Hash updated on blockchain!', 'success');
+    closeModal('modal-update');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ══════════════════════════════════════════════════════
+// INTEGRITY CHECK
+// ══════════════════════════════════════════════════════
+function renderCheck() {
+  setMain(`
+    <div class="page-header">
+      <h2>Check File Integrity</h2>
+      <p>Verify that a local file matches its on-chain hash — read-only, no transaction.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Verify File</span></div>
+        <div class="card-body">
+          <div class="field"><label>Dataset ID</label><input type="text" id="chk-id" placeholder="MFU-7-VITALS-001"></div>
+          <div class="field">
+            <label>File to Verify</label>
+            <div class="drop-zone" id="chk-drop" onclick="document.getElementById('chk-file').click()" ondragover="dzDrag(event)" ondragleave="dzLeave()" ondrop="chkDrop(event)">
+              <div class="dz-icon">📂</div>
+              <h4 id="chk-filename">Select file to check</h4>
+              <p>File will be hashed locally — not uploaded</p>
+            </div>
+            <input type="file" id="chk-file" style="display:none" onchange="chkFileSelected(this.files[0])">
+          </div>
+          <div class="field" style="display:none" id="chk-hash-row">
+            <label>Or enter SHA-256 hash manually</label>
+            <input type="text" id="chk-hash" placeholder="0x...64-char hex">
+          </div>
+          <button class="btn btn-primary" onclick="runIntegrityCheck()">🔍 Check Integrity</button>
+          <div id="chk-result" style="margin-top:16px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">ℹ️ About Integrity Check</span></div>
+        <div class="card-body">
+          <p style="font-size:13px;color:var(--text);line-height:1.6">The integrity check computes the SHA-256 hash of your file and compares it against the hash stored on the Reltime blockchain.</p>
+          <div class="alert alert-info mt-4"><strong>No transaction is made.</strong> This is a read-only operation — free and instant.</div>
+          <div style="margin-top:16px">
+            <p style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">Result meanings:</p>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;gap:8px;align-items:center"><span class="badge badge-green">✅ MATCH</span><span style="font-size:12px;color:var(--muted)">File is intact, not tampered</span></div>
+              <div style="display:flex;gap:8px;align-items:center"><span class="badge badge-red">❌ MISMATCH</span><span style="font-size:12px;color:var(--muted)">File has been modified</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
+let checkFile = null;
+
+function chkDrop(e) { e.preventDefault(); dzLeave(); const f = e.dataTransfer.files[0]; if(f) chkFileSelected(f); }
+function chkFileSelected(file) {
+  checkFile = file;
+  document.getElementById('chk-filename').textContent = file.name;
+  document.getElementById('chk-drop').classList.add('has-file');
+}
+
+async function runIntegrityCheck() {
+  const datasetId = document.getElementById('chk-id').value.trim();
+  let hash = document.getElementById('chk-hash').value.trim();
+  const resultEl = document.getElementById('chk-result');
+  if (!datasetId) { toast('Enter a dataset ID', 'error'); return; }
+  if (!hash && !checkFile) { toast('Select a file or enter a hash', 'error'); return; }
+  if (checkFile && !hash) {
+    resultEl.innerHTML = '<div class="alert alert-info">Computing hash…</div>';
+    hash = await computeSHA256(checkFile);
+  }
+  resultEl.innerHTML = '<div class="spinner spinner-dark"></div>';
+  try {
+    const data = await api('GET', `/api/v1/hash/check/${encodeURIComponent(datasetId)}/${encodeURIComponent(hash)}`);
+    const d = data.data;
+    const match = d.match || d.isValid || d.valid || (d.storedHash?.toLowerCase() === hash.toLowerCase());
+    resultEl.innerHTML = `
+      <div class="alert ${match ? 'alert-success' : 'alert-error'}">
+        <div>
+          <strong>${match ? '✅ MATCH — File is intact' : '❌ MISMATCH — File may have been tampered with'}</strong>
+          <div style="margin-top:8px;font-size:12px">
+            <div>Provided: <span class="mono">${hash.slice(0,32)}…</span></div>
+            <div>On-chain: <span class="mono">${(d.storedHash||d.hash||'—').slice(0,32)}…</span></div>
+          </div>
+        </div>
+      </div>`;
+  } catch(e) {
+    resultEl.innerHTML = `<div class="alert alert-error">❌ ${e.message}</div>`;
+  }
+}
+
+async function computeSHA256(file) {
+  const buf = await file.arrayBuffer();
+  const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+  const hex = Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  return '0x' + hex;
+}
+
+// ══════════════════════════════════════════════════════
+// VALIDATE HASH (doctor)
+// ══════════════════════════════════════════════════════
+function renderValidate() {
+  if (!CAN_VALIDATE.includes(state.user?.role)) {
+    setMain('<div class="empty-state"><div class="empty-icon">🚫</div><h3>Access Denied</h3><p>Only doctors can validate hashes.</p></div>');
+    return;
+  }
+  setMain(`
+    <div class="page-header">
+      <h2>Validate Hash</h2>
+      <p>Validate a dataset's hash on-chain — creates an immutable audit event (requires a transaction).</p>
+    </div>
+    <div class="card" style="max-width:560px">
+      <div class="card-body">
+        <div class="alert alert-warning">This action creates an <strong>on-chain transaction</strong> and emits a validation audit event. Use for official record validation only.</div>
+        <div class="field mt-4"><label>Dataset ID</label><input type="text" id="val-id" placeholder="e.g. MFU-7-VITALS-001"></div>
+        <div class="field"><label>SHA-256 Hash to Validate</label><input type="text" id="val-hash" placeholder="0x...64-char hex"></div>
+        <button class="btn btn-primary" onclick="submitValidate()">✅ Validate On-Chain</button>
+        <div id="val-result" style="margin-top:16px"></div>
+      </div>
+    </div>
+  `);
+}
+
+async function submitValidate() {
+  const datasetId = document.getElementById('val-id').value.trim();
+  const hash = document.getElementById('val-hash').value.trim();
+  const resultEl = document.getElementById('val-result');
+  if (!datasetId || !hash) { toast('Dataset ID and hash are required', 'error'); return; }
+  resultEl.innerHTML = '<div class="spinner spinner-dark"></div>';
+  try {
+    const data = await api('POST', '/api/v1/hash/validate', { datasetId, hash });
+    resultEl.innerHTML = `<div class="alert alert-success">✅ Validation recorded on-chain!<br><span class="mono" style="font-size:11px">TX: ${data.data?.transactionHash || '—'}</span></div>`;
+  } catch(e) {
+    resultEl.innerHTML = `<div class="alert alert-error">❌ ${e.message}</div>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// AUDIT SUMMARY
+// ══════════════════════════════════════════════════════
+async function renderAudit() {
+  if (!CAN_AUDIT.includes(state.user?.role)) {
+    setMain('<div class="empty-state"><div class="empty-icon">🚫</div><h3>Access Denied</h3><p>Only auditors and admins can view the audit summary.</p></div>');
+    return;
+  }
+  setMain(`
+    <div class="page-header"><h2>Audit Summary</h2><p>Compliance dashboard — on-chain record counts by type.</p></div>
+    <div style="text-align:center;padding:60px"><div class="spinner spinner-dark"></div><p style="margin-top:12px;color:var(--muted)">Loading audit data…</p></div>
+  `);
+  try {
+    const data = await api('GET', '/api/v1/hash/audit/summary');
+    const d = data.data;
+    const typeColors = { LAB_RESULT:'blue', DIAGNOSIS:'purple', PRESCRIPTION:'green', CONSENT_FORM:'teal', IMAGING:'amber' };
+    const counts = d.counts || d.summary || d;
+    setMain(`
+      <div class="page-header"><h2>Audit Summary</h2><p>Compliance dashboard — on-chain record counts by type.</p></div>
+      <div class="stats-grid">
+        ${Object.entries(counts||{}).map(([type,count]) => `
+          <div class="stat-card">
+            <div class="stat-icon ${typeColors[type]||'blue'}">${{LAB_RESULT:'🧪',DIAGNOSIS:'🩺',PRESCRIPTION:'💊',CONSENT_FORM:'📋',IMAGING:'🖼️'}[type]||'📦'}</div>
+            <div class="stat-info"><h3>${count}</h3><p>${type.replace('_',' ')}</p></div>
+          </div>`).join('')}
+        <div class="stat-card"><div class="stat-icon green">📊</div><div class="stat-info"><h3>${Object.values(counts||{}).reduce((a,b)=>a+b,0)}</h3><p>Total Records</p></div></div>
+      </div>
+      <div class="card mt-6">
+        <div class="card-header"><span class="card-title">Raw Audit Data</span></div>
+        <div class="card-body"><pre style="font-size:12px;overflow:auto">${JSON.stringify(d,null,2)}</pre></div>
+      </div>
+    `);
+  } catch(e) {
+    setMain(`<div class="page-header"><h2>Audit Summary</h2></div><div class="alert alert-error">❌ ${e.message}</div>`);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// USERS (admin)
+// ══════════════════════════════════════════════════════
+async function renderUsers() {
+  if (!CAN_ADMIN.includes(state.user?.role)) {
+    setMain('<div class="empty-state"><div class="empty-icon">🚫</div><h3>Access Denied</h3><p>Admin only.</p></div>');
+    return;
+  }
+  setMain(`<div class="page-header"><h2>User Management</h2><p>View all users and manage their system roles.</p></div><div style="text-align:center;padding:40px"><div class="spinner spinner-dark"></div></div>`);
+  try {
+    const data = await api('GET', '/api/v1/admin/users');
+    const VALID_ROLES = ['nurse','doctor','pharmacist','consent_officer','auditor','admin','pending'];
+    setMain(`
+      <div class="page-header">
+        <h2>User Management</h2>
+        <p>${data.count} users registered in the system.</p>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Wallet</th><th>Joined</th><th>Actions</th></tr></thead>
+            <tbody>
+              ${data.users.map(u => `
+                <tr>
+                  <td><strong>${u.fullName||'—'}</strong></td>
+                  <td style="font-size:12px">${u.email}</td>
+                  <td><span class="user-role-badge ${ROLE_COLORS[u.role]||'role-pending'}">${u.role}</span></td>
+                  <td><span class="mono">${u.walletAddress ? u.walletAddress.slice(0,10)+'…' : 'None'}</span></td>
+                  <td style="font-size:12px;color:var(--muted)">${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</td>
+                  <td>
+                    <select onchange="changeRole(${u.id},this.value,this)" style="padding:4px 8px;font-size:12px;border:1px solid var(--border);border-radius:6px;cursor:pointer">
+                      ${VALID_ROLES.map(r => `<option value="${r}" ${r===u.role?'selected':''}>${r}</option>`).join('')}
+                    </select>
+                  </td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `);
+  } catch(e) {
+    setMain(`<div class="page-header"><h2>User Management</h2></div><div class="alert alert-error">❌ ${e.message}</div>`);
+  }
+}
+
+async function changeRole(userId, newRole, selectEl) {
+  const orig = selectEl.dataset.orig || selectEl.value;
+  try {
+    await api('PUT', `/api/v1/admin/users/${userId}/role`, { role: newRole });
+    toast(`Role updated to '${newRole}'`, 'success');
+    selectEl.dataset.orig = newRole;
+  } catch(e) {
+    toast(`Failed: ${e.message}`, 'error');
+    selectEl.value = orig;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════════════════
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if(e.target === el) el.classList.remove('open'); });
+});
+</script>
+</body>
+</html>
