@@ -1,6 +1,32 @@
 const crypto = require("crypto");
 
 /**
+ * Upload a JSON object to Pinata IPFS and return the CID.
+ * Used for storing column-policy metadata alongside a file upload.
+ */
+async function uploadJSONToIPFS(obj, name) {
+  const jwt = process.env.PINATA_JWT;
+  if (!jwt) throw new Error("PINATA_JWT environment variable not set");
+
+  const response = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ pinataMetadata: { name }, pinataContent: obj }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Pinata JSON upload failed (${response.status}): ${text}`);
+  }
+
+  const data = await response.json();
+  return data.IpfsHash;
+}
+
+/**
  * Upload a file buffer to Pinata IPFS and return the CID + gateway URL.
  * Requires PINATA_JWT environment variable.
  */
@@ -35,7 +61,8 @@ async function uploadToIPFS(fileBuffer, filename, mimeType) {
 
   return {
     cid,
-    ipfsUrl: `https://gateway.pinata.cloud/ipfs/${cid}`,
+    ipfsUrl: `https://ipfs.io/ipfs/${cid}`,
+    pinataUrl: `https://gateway.pinata.cloud/ipfs/${cid}`,
   };
 }
 
@@ -44,4 +71,4 @@ function computeSHA256(buffer) {
   return "0x" + crypto.createHash("sha256").update(buffer).digest("hex");
 }
 
-module.exports = { uploadToIPFS, computeSHA256 };
+module.exports = { uploadToIPFS, uploadJSONToIPFS, computeSHA256 };
