@@ -126,8 +126,16 @@ function renderMarkdownPage(title, mdPath, res) {
 }
 
 // Web UI
+app.get("/", (_req, res) => {
+  res.redirect(302, "/app");
+});
+
 app.get("/app", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/app.html"));
+});
+
+app.get("/favicon.ico", (_req, res) => {
+  res.redirect(302, "/comfortage-positivo-color.svg");
 });
 
 // Role-based access guide

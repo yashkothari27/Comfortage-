@@ -5,6 +5,11 @@
       "src": "src/server.js",
       "use": "@vercel/node",
       "config": {
+        "includeFiles": [
+          "node_modules/sql.js/dist/sql-wasm.wasm",
+          "public/**",
+          "postman_collection.json"
+        ],
         "installCommand": "npm install && npm run compile",
         "buildCommand": "echo 'Artifacts generated during install phase'"
       }
