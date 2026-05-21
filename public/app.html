@@ -873,6 +873,186 @@ thead th,
   background: linear-gradient(90deg, var(--teal), var(--primary));
 }
 
+.page-kicker {
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 420px);
+  gap: 24px;
+  align-items: start;
+}
+
+.section-band {
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 22px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(232,246,243,0.82));
+  box-shadow: var(--shadow-sm);
+}
+
+.insight-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  padding: 18px;
+}
+
+.insight-card h3 {
+  color: var(--navy);
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.insight-card p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.timeline {
+  display: grid;
+  gap: 12px;
+}
+
+.timeline-step {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.timeline-index {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--teal), var(--primary));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.timeline-step strong {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+
+.timeline-step span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.search-panel {
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.97), rgba(232,246,243,0.86)),
+    url("/comfortage-positivo-color.svg") no-repeat right 24px center / 210px auto;
+  box-shadow: var(--shadow-sm);
+}
+
+.search-row {
+  display: flex;
+  gap: 10px;
+  max-width: 760px;
+}
+
+.search-row input {
+  flex: 1;
+  min-height: 46px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+}
+
+.search-row input:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 4px rgba(23, 169, 155, 0.12);
+}
+
+.example-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.floating-tools {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 250;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tool-toggle,
+.tool-btn {
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.94);
+  color: var(--navy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+
+.tool-btn {
+  display: none;
+}
+
+.floating-tools.open .tool-btn {
+  display: flex;
+}
+
+body.large-text {
+  font-size: 17px;
+}
+
+body.high-contrast {
+  --bg: #ffffff;
+  --surface-soft: #eef6f4;
+  --text: #071b26;
+  --muted: #334b57;
+  --border: #9bb8b4;
+  --card-border: #9bb8b4;
+}
+
+body.reduce-motion * {
+  animation: none !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 @media (max-width: 1120px) {
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -884,6 +1064,10 @@ thead th,
 
   .main-content > div[style*="grid-template-columns"] {
     grid-template-columns: 1fr !important;
+  }
+
+  .workspace-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -953,10 +1137,15 @@ thead th,
 
   .stats-grid,
   .permission-grid,
+  .workspace-grid,
   .grid-2,
   .form-row,
   .form-row-3 {
     grid-template-columns: 1fr;
+  }
+
+  .search-row {
+    flex-direction: column;
   }
 
   .demo-grid {
@@ -969,6 +1158,12 @@ thead th,
 
 <!-- ── TOAST CONTAINER ── -->
 <div class="toast-container" id="toasts"></div>
+<div class="floating-tools" id="access-tools" aria-label="Accessibility controls">
+  <button class="tool-btn" type="button" onclick="toggleTextSize()" title="Toggle larger text">A+</button>
+  <button class="tool-btn" type="button" onclick="toggleContrast()" title="Toggle high contrast">HC</button>
+  <button class="tool-btn" type="button" onclick="toggleMotion()" title="Reduce motion">RM</button>
+  <button class="tool-toggle" type="button" onclick="toggleAccessTools()" title="Accessibility">Aa</button>
+</div>
 
 <!-- ══════════════════════════════════════════════════════════
      LOGIN SCREEN
@@ -1248,7 +1443,11 @@ function navigate(page) {
   (pages[page] || renderDashboard)();
 }
 
-function setMain(html) { document.getElementById('main-content').innerHTML = html; }
+function setMain(html) {
+  const main = document.getElementById('main-content');
+  main.innerHTML = html;
+  main.scrollTo?.({ top: 0, behavior: document.body.classList.contains('reduce-motion') ? 'auto' : 'smooth' });
+}
 
 // ══════════════════════════════════════════════════════
 // TOAST
@@ -1266,6 +1465,22 @@ function toast(msg, type='success') {
 // ══════════════════════════════════════════════════════
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function toggleAccessTools() {
+  document.getElementById('access-tools').classList.toggle('open');
+}
+
+function toggleTextSize() {
+  document.body.classList.toggle('large-text');
+}
+
+function toggleContrast() {
+  document.body.classList.toggle('high-contrast');
+}
+
+function toggleMotion() {
+  document.body.classList.toggle('reduce-motion');
+}
 
 // ══════════════════════════════════════════════════════
 // DASHBOARD
@@ -1346,10 +1561,11 @@ function renderUpload() {
   const types = UPLOAD_RECORD_TYPES[role] || [];
   setMain(`
     <div class="page-header">
+      <div class="page-kicker">Secure submission</div>
       <h2>Upload File</h2>
-      <p>Upload a medical record to IPFS and anchor its hash on the Reltime blockchain.</p>
+      <p>Upload a medical record to IPFS and anchor its hash on the Reltime blockchain with role-aware access controls.</p>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 420px;gap:24px;align-items:start">
+    <div class="workspace-grid">
       <div>
         <div class="card">
           <div class="card-header"><span class="card-title">File & Record Details</span></div>
@@ -1373,13 +1589,13 @@ function renderUpload() {
               <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()" ondragover="dzDrag(event)" ondragleave="dzLeave()" ondrop="dzDrop(event)">
                 <div class="dz-icon" id="dz-icon">📄</div>
                 <h4 id="dz-title">Click or drag file here</h4>
-                <p id="dz-sub">PDF, Word, DICOM, PNG, JPG, CSV — max 4 MB</p>
+                <p id="dz-sub">PDF, Word, DICOM, PNG, JPG, CSV - max 4 MB</p>
               </div>
               <input type="file" id="file-input" onchange="fileSelected(this.files[0])">
             </div>
             <div id="policy-section" style="display:none">
               <div class="policy-builder">
-                <h4>🔒 Column Access Policy <span style="font-size:11px;color:var(--muted);font-weight:400">(CSV detected — set per-column permissions)</span></h4>
+                <h4>Column Access Policy <span style="font-size:11px;color:var(--muted);font-weight:400">(CSV detected - set per-column permissions)</span></h4>
                 <div class="alert alert-info" style="margin-bottom:12px">Columns not restricted here will be visible to <strong>all roles</strong>. Admin always sees everything.</div>
                 <table class="policy-table" id="policy-table">
                   <thead><tr><th>Column Name</th><th>Access Level</th><th>Allowed Roles</th></tr></thead>
@@ -1388,7 +1604,7 @@ function renderUpload() {
               </div>
             </div>
             <div style="margin-top:20px">
-              <button class="btn btn-primary" id="up-btn" onclick="submitUpload()">⬆️ Upload to IPFS + Blockchain</button>
+              <button class="btn btn-primary" id="up-btn" onclick="submitUpload()">Upload to IPFS + Blockchain</button>
             </div>
             <div id="up-progress" style="display:none;margin-top:16px">
               <p id="up-step" style="font-size:13px;color:var(--muted);margin-bottom:6px">Uploading…</p>
@@ -1398,21 +1614,27 @@ function renderUpload() {
         </div>
       </div>
       <div>
-        <div class="card">
-          <div class="card-header"><span class="card-title">ℹ️ How it works</span></div>
-          <div class="card-body">
+        <div class="section-band">
+          <div class="page-kicker">Integrity flow</div>
+          <h3 style="color:var(--navy);font-size:24px;margin-bottom:8px">Proof without friction</h3>
+          <p style="color:var(--muted);font-size:13px;line-height:1.65;margin-bottom:18px">Every record is prepared in a transparent sequence so clinical teams can trust what happened and when.</p>
+          <div>
             <div style="display:flex;flex-direction:column;gap:14px">
               ${[
                 ['1','SHA-256 computed','Your file is hashed client-side (browser) before upload.'],
                 ['2','IPFS upload','File is pinned to IPFS via Pinata. You get a permanent CID.'],
                 ['3','Column policy','If CSV, your access rules are stored as a separate JSON on IPFS.'],
                 ['4','Blockchain anchor','The hash + CID is stored on Reltime Mainnet. Immutable proof.'],
-              ].map(([n,t,d]) => `<div style="display:flex;gap:12px"><div style="width:24px;height:24px;border-radius:50%;background:var(--blue);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${n}</div><div><p style="font-size:13px;font-weight:600;color:var(--text)">${t}</p><p style="font-size:12px;color:var(--muted)">${d}</p></div></div>`).join('')}
+              ].map(([n,t,d]) => `<div class="timeline-step"><div class="timeline-index">${n}</div><div><strong>${t}</strong><span>${d}</span></div></div>`).join('')}
             </div>
           </div>
         </div>
+        <div class="insight-card mt-4">
+          <h3>Access by design</h3>
+          <p>Clinical roles see only the data they are permitted to use. Doctors and admins keep broader visibility for validation and oversight.</p>
+        </div>
         <div class="card mt-4" id="up-result" style="display:none">
-          <div class="card-header"><span class="card-title">✅ Upload Result</span></div>
+          <div class="card-header"><span class="card-title">Upload Result</span></div>
           <div class="card-body" id="up-result-body"></div>
         </div>
       </div>
@@ -1422,9 +1644,14 @@ function renderUpload() {
 
 let selectedFile = null;
 
-function dzDrag(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('dragover'); }
-function dzLeave() { document.getElementById('drop-zone').classList.remove('dragover'); }
-function dzDrop(e) { e.preventDefault(); dzLeave(); const f = e.dataTransfer.files[0]; if(f) fileSelected(f); }
+function dzDrag(e) {
+  e.preventDefault();
+  (e.currentTarget || document.getElementById('drop-zone'))?.classList.add('dragover');
+}
+function dzLeave(e) {
+  (e?.currentTarget || document.getElementById('drop-zone') || document.getElementById('chk-drop'))?.classList.remove('dragover');
+}
+function dzDrop(e) { e.preventDefault(); dzLeave(e); const f = e.dataTransfer.files[0]; if(f) fileSelected(f); }
 
 function fileSelected(file) {
   if (!file) return;
@@ -1553,7 +1780,7 @@ async function submitUpload() {
     document.getElementById('drop-zone').className = 'drop-zone';
     document.getElementById('dz-icon').textContent = '📄';
     document.getElementById('dz-title').textContent = 'Click or drag file here';
-    document.getElementById('dz-sub').textContent = 'PDF, Word, DICOM, PNG, JPG, CSV — max 4 MB';
+    document.getElementById('dz-sub').textContent = 'PDF, Word, DICOM, PNG, JPG, CSV - max 4 MB';
     document.getElementById('policy-section').style.display = 'none';
     state.uploadedCSVHeaders = [];
   } catch(e) {
@@ -1570,19 +1797,21 @@ async function submitUpload() {
 function renderDatasets() {
   setMain(`
     <div class="page-header">
+      <div class="page-kicker">Dataset explorer</div>
       <h2>Browse Datasets</h2>
-      <p>Look up any dataset by ID to view its on-chain record, IPFS file, and version history.</p>
+      <p>Look up any dataset by ID to view its on-chain record, IPFS file, data policy, and version history.</p>
     </div>
-    <div class="card mb-4">
-      <div class="card-body" style="display:flex;gap:10px">
-        <input type="text" id="ds-search" placeholder="Enter Dataset ID (e.g. MFU-7-VITALS-001)" style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;outline:none" onkeydown="if(e.key==='Enter')lookupDataset()">
-        <button class="btn btn-primary" onclick="lookupDataset()">🔍 Look Up</button>
+    <div class="search-panel mb-4">
+      <div class="page-kicker">On-chain lookup</div>
+      <div class="search-row">
+        <input type="text" id="ds-search" placeholder="Enter Dataset ID (e.g. MFU-7-VITALS-001)" onkeydown="if(e.key==='Enter')lookupDataset()">
+        <button class="btn btn-primary" onclick="lookupDataset()">Look Up</button>
       </div>
     </div>
     <div id="ds-result"></div>
     <div class="card">
       <div class="card-header"><span class="card-title">Example Dataset IDs to Try</span></div>
-      <div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap">
+      <div class="card-body example-chips">
         ${['MFU-7-VITALS-TEST-001','DATASET-UPLOAD-TEST'].map(id => `<button class="btn btn-ghost btn-sm" onclick="document.getElementById('ds-search').value='${id}';lookupDataset()">${id}</button>`).join('')}
       </div>
     </div>
@@ -1602,11 +1831,11 @@ async function lookupDataset() {
     el.innerHTML = `
       <div class="card mb-4">
         <div class="card-header">
-          <span class="card-title">📦 ${id}</span>
+          <span class="card-title">${id}</span>
           <div class="flex gap-2">
-            <button class="btn btn-ghost btn-sm" onclick="viewHistory('${id}')">📜 History</button>
-            <button class="btn btn-secondary btn-sm" onclick="viewData('${id}')">👁️ View Data</button>
-            ${CAN_UPLOAD.includes(state.user?.role) ? `<button class="btn btn-ghost btn-sm" onclick="openUpdateModal('${id}')">✏️ Update</button>` : ''}
+            <button class="btn btn-ghost btn-sm" onclick="viewHistory('${id}')">History</button>
+            <button class="btn btn-secondary btn-sm" onclick="viewData('${id}')">View Data</button>
+            ${CAN_UPLOAD.includes(state.user?.role) ? `<button class="btn btn-ghost btn-sm" onclick="openUpdateModal('${id}')">Update</button>` : ''}
           </div>
         </div>
         <div class="card-body">
@@ -1740,10 +1969,11 @@ async function submitUpdate() {
 function renderCheck() {
   setMain(`
     <div class="page-header">
+      <div class="page-kicker">Read-only verification</div>
       <h2>Check File Integrity</h2>
-      <p>Verify that a local file matches its on-chain hash — read-only, no transaction.</p>
+      <p>Verify that a local file matches its on-chain hash. This is read-only and creates no transaction.</p>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+    <div class="workspace-grid">
       <div class="card">
         <div class="card-header"><span class="card-title">Verify File</span></div>
         <div class="card-body">
@@ -1761,15 +1991,15 @@ function renderCheck() {
             <label>Or enter SHA-256 hash manually</label>
             <input type="text" id="chk-hash" placeholder="0x...64-char hex">
           </div>
-          <button class="btn btn-primary" onclick="runIntegrityCheck()">🔍 Check Integrity</button>
+          <button class="btn btn-primary" onclick="runIntegrityCheck()">Check Integrity</button>
           <div id="chk-result" style="margin-top:16px"></div>
         </div>
       </div>
       <div class="card">
-        <div class="card-header"><span class="card-title">ℹ️ About Integrity Check</span></div>
+        <div class="card-header"><span class="card-title">About Integrity Check</span></div>
         <div class="card-body">
           <p style="font-size:13px;color:var(--text);line-height:1.6">The integrity check computes the SHA-256 hash of your file and compares it against the hash stored on the Reltime blockchain.</p>
-          <div class="alert alert-info mt-4"><strong>No transaction is made.</strong> This is a read-only operation — free and instant.</div>
+          <div class="alert alert-info mt-4"><strong>No transaction is made.</strong> This is a read-only operation - free and instant.</div>
           <div style="margin-top:16px">
             <p style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">Result meanings:</p>
             <div style="display:flex;flex-direction:column;gap:6px">
@@ -1839,15 +2069,16 @@ function renderValidate() {
   }
   setMain(`
     <div class="page-header">
+      <div class="page-kicker">Clinical validation</div>
       <h2>Validate Hash</h2>
-      <p>Validate a dataset's hash on-chain — creates an immutable audit event (requires a transaction).</p>
+      <p>Validate a dataset's hash on-chain and create an immutable audit event for official review.</p>
     </div>
     <div class="card" style="max-width:560px">
       <div class="card-body">
         <div class="alert alert-warning">This action creates an <strong>on-chain transaction</strong> and emits a validation audit event. Use for official record validation only.</div>
         <div class="field mt-4"><label>Dataset ID</label><input type="text" id="val-id" placeholder="e.g. MFU-7-VITALS-001"></div>
         <div class="field"><label>SHA-256 Hash to Validate</label><input type="text" id="val-hash" placeholder="0x...64-char hex"></div>
-        <button class="btn btn-primary" onclick="submitValidate()">✅ Validate On-Chain</button>
+        <button class="btn btn-primary" onclick="submitValidate()">Validate On-Chain</button>
         <div id="val-result" style="margin-top:16px"></div>
       </div>
     </div>
@@ -1877,7 +2108,7 @@ async function renderAudit() {
     return;
   }
   setMain(`
-    <div class="page-header"><h2>Audit Summary</h2><p>Compliance dashboard — on-chain record counts by type.</p></div>
+    <div class="page-header"><div class="page-kicker">Compliance overview</div><h2>Audit Summary</h2><p>Compliance dashboard - on-chain record counts by type.</p></div>
     <div style="text-align:center;padding:60px"><div class="spinner spinner-dark"></div><p style="margin-top:12px;color:var(--muted)">Loading audit data…</p></div>
   `);
   try {
@@ -1886,7 +2117,7 @@ async function renderAudit() {
     const typeColors = { LAB_RESULT:'blue', DIAGNOSIS:'purple', PRESCRIPTION:'green', CONSENT_FORM:'teal', IMAGING:'amber' };
     const counts = d.counts || d.summary || d;
     setMain(`
-      <div class="page-header"><h2>Audit Summary</h2><p>Compliance dashboard — on-chain record counts by type.</p></div>
+      <div class="page-header"><div class="page-kicker">Compliance overview</div><h2>Audit Summary</h2><p>Compliance dashboard - on-chain record counts by type.</p></div>
       <div class="stats-grid">
         ${Object.entries(counts||{}).map(([type,count]) => `
           <div class="stat-card">
@@ -1913,12 +2144,13 @@ async function renderUsers() {
     setMain('<div class="empty-state"><div class="empty-icon">🚫</div><h3>Access Denied</h3><p>Admin only.</p></div>');
     return;
   }
-  setMain(`<div class="page-header"><h2>User Management</h2><p>View all users and manage their system roles.</p></div><div style="text-align:center;padding:40px"><div class="spinner spinner-dark"></div></div>`);
+  setMain(`<div class="page-header"><div class="page-kicker">Administration</div><h2>User Management</h2><p>View all users and manage their system roles.</p></div><div style="text-align:center;padding:40px"><div class="spinner spinner-dark"></div></div>`);
   try {
     const data = await api('GET', '/api/v1/admin/users');
     const VALID_ROLES = ['nurse','doctor','pharmacist','consent_officer','auditor','admin','pending'];
     setMain(`
       <div class="page-header">
+        <div class="page-kicker">Administration</div>
         <h2>User Management</h2>
         <p>${data.count} users registered in the system.</p>
       </div>

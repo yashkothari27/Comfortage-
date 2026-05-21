@@ -1,46 +1,95 @@
-# COMFORTage T3.3 — Command-Line Upload Guide
-### For PowerShell / Bash (WSL / Linux / macOS)
+# COMFORTage T3.3 Command Line Guide
 
-**Base URL:** `https://comfortage.vercel.app`
+This guide shows how to call the COMFORTage T3.3 data integrity system from WSL Bash, Linux/macOS Bash, and Windows PowerShell without touching the server code or database directly.
 
----
+Use the web UI when possible: `http://localhost:3000/app`
 
-## 1. Prerequisites
+Use the API/CLI when you need repeatable uploads, batch ingestion, or automated verification.
 
-| Tool | Install |
-|------|---------|
-| `curl` | Pre-installed on WSL/Linux/macOS. Windows: install via `winget install curl.curl` |
-| `jq` | `sudo apt install jq` (WSL/Linux) · `brew install jq` (macOS) |
+## What This System Covers
 
----
+The current implementation supports:
 
-## 2. Login and Get Your Token
+- IPFS file upload and permanent CID generation.
+- On-chain SHA-256 hash anchoring on Reltime.
+- Role-based upload permissions.
+- Per-file access through authenticated roles.
+- Per-column access control for CSV files through `columnPolicy`.
+- Dataset lookup, data retrieval, update, version history, and read-only integrity checks.
+- Doctor-only validation events.
+- Auditor/admin audit summary.
+- GUI use for non-technical users through `/app`.
 
-Every request requires a Bearer token. Log in once per session and save the token.
+Important privacy note: the system can reduce storage-custody burden by using IPFS, hashing, access control, and auditability. It does not remove GDPR/controller obligations by itself. The data controller still decides who receives access and must ensure lawful basis, minimization, retention, consent, and operational security.
 
-**Bash / WSL:**
+## 1. Configure Your Base URL
+
+For local development:
+
 ```bash
-TOKEN=$(curl -s -X POST https://comfortage.vercel.app/api/v1/auth/login \
+BASE_URL="http://localhost:3000"
+```
+
+For a deployed server:
+
+```bash
+BASE_URL="https://comfortage.vercel.app"
+```
+
+PowerShell:
+
+```powershell
+$BASE_URL = "http://localhost:3000"
+```
+
+## 2. Required Tools
+
+WSL Bash:
+
+```bash
+sudo apt update
+sudo apt install -y curl jq coreutils
+```
+
+PowerShell:
+
+```powershell
+curl.exe --version
+```
+
+For JSON formatting in PowerShell, `ConvertTo-Json` and `ConvertFrom-Json` are built in.
+
+## 3. Login
+
+All protected endpoints require a Bearer token.
+
+WSL Bash:
+
+```bash
+TOKEN=$(curl -s -X POST "$BASE_URL/api/v1/auth/login" \
   -H "Content-Type: application/json" \
   -d '{"email":"sara.johnson@comfortage.health","password":"Nurse@Sara2024!"}' \
   | jq -r '.token')
 
-echo "Logged in. Token saved."
+echo "$TOKEN" | cut -c1-24
 ```
 
-**PowerShell:**
+PowerShell:
+
 ```powershell
-$response = Invoke-RestMethod -Uri "https://comfortage.vercel.app/api/v1/auth/login" `
-  -Method POST -ContentType "application/json" `
+$login = Invoke-RestMethod -Uri "$BASE_URL/api/v1/auth/login" `
+  -Method POST `
+  -ContentType "application/json" `
   -Body '{"email":"sara.johnson@comfortage.health","password":"Nurse@Sara2024!"}'
-$TOKEN = $response.token
-Write-Host "Logged in. Token saved."
+
+$TOKEN = $login.token
+$TOKEN.Substring(0, 24)
 ```
 
-### Test Accounts
+Test accounts:
 
 | Role | Email | Password |
-|------|-------|----------|
+| --- | --- | --- |
 | nurse | sara.johnson@comfortage.health | Nurse@Sara2024! |
 | nurse | miguel.torres@comfortage.health | Nurse@Miguel2024! |
 | doctor | dr.emily.chen@comfortage.health | Doctor@Emily2024! |
@@ -50,293 +99,335 @@ Write-Host "Logged in. Token saved."
 | auditor | claire.dubois@comfortage.health | Audit@Claire2024! |
 | admin | admin@comfortage.health | Admin@Comfortage2024! |
 
----
+## 4. Record Types and Upload Permissions
 
-## 3. Upload a File (No Column Policy)
+| Role | Allowed record types |
+| --- | --- |
+| nurse | `LAB_RESULT`, `DIAGNOSIS`, `IMAGING` |
+| pharmacist | `PRESCRIPTION` |
+| consent_officer | `CONSENT_FORM` |
+| doctor | validation and data access; no upload |
+| auditor | audit and read access; no upload |
+| admin | user/audit administration |
 
-Uploads the file to IPFS and anchors its SHA-256 hash on the Reltime blockchain.
+## 5. Upload a File Without Column Restrictions
 
-**Record type options:** `LAB_RESULT` · `DIAGNOSIS` · `IMAGING` · `PRESCRIPTION` · `CONSENT_FORM`
+WSL Bash:
 
 ```bash
-curl -X POST https://comfortage.vercel.app/api/v1/hash/upload \
+curl -s -X POST "$BASE_URL/api/v1/hash/upload" \
   -H "Authorization: Bearer $TOKEN" \
-  -F "file=@/path/to/your/file.csv;type=text/csv" \
-  -F "datasetId=MFU-7-VITAL-SIGNS-001" \
+  -F "file=@/path/to/file.csv;type=text/csv" \
+  -F "datasetId=MFU-7-VITALS-001" \
+  -F "recordType=LAB_RESULT" | jq .
+```
+
+PowerShell:
+
+```powershell
+curl.exe -s -X POST "$BASE_URL/api/v1/hash/upload" `
+  -H "Authorization: Bearer $TOKEN" `
+  -F "file=@C:\path\to\file.csv;type=text/csv" `
+  -F "datasetId=MFU-7-VITALS-001" `
   -F "recordType=LAB_RESULT"
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "datasetId": "MFU-7-VITAL-SIGNS-001",
-    "fileCid": "QmXxx...",
-    "ipfsUrl": "https://ipfs.io/ipfs/QmXxx...",
-    "transactionHash": "0xabc...",
-    "blockNumber": 38743051,
-    "status": "confirmed"
-  }
-}
-```
+The response includes:
 
----
+- `hash`: SHA-256 hash of the file.
+- `fileCid`: raw file CID on IPFS.
+- `ipfsUrl`: gateway URL.
+- `transactionHash`: blockchain transaction.
+- `blockNumber`: block where the proof was recorded.
 
-## 4. Upload a File WITH Column-Level Access Policy
+## 6. Upload a CSV With Column-Level Access Control
 
-Use `columnPolicy` to restrict which roles can see specific columns.
+Use `columnPolicy` to restrict individual CSV columns.
 
-**Policy format:** JSON object mapping column name → array of allowed roles.  
-Use `"*"` to allow all roles. Unlisted columns are visible to everyone.
+Rules:
 
-**Roles:** `nurse` · `doctor` · `pharmacist` · `consent_officer` · `auditor` · `admin`
+- Unlisted columns are visible to everyone.
+- `["*"]` means everyone can see that column.
+- `admin` always sees all columns.
+- Column names must match the CSV header exactly.
 
-### Example: MFU #7 dataset — restrict sensitive columns to doctors only
+Example:
 
 ```bash
 POLICY='{
-  "name":        ["doctor","admin"],
+  "participant_name": ["doctor","admin"],
   "date_of_birth": ["doctor","admin"],
-  "diagnosis":   ["doctor","admin"],
-  "stage_progression": ["doctor","admin"],
+  "diagnosis": ["doctor","admin"],
+  "medication": ["doctor","pharmacist","admin"],
+  "consent_notes": ["consent_officer","admin"],
+  "heart_rate": ["*"],
   "blood_pressure": ["*"],
-  "heart_rate":  ["*"],
-  "weight":      ["*"]
+  "steps": ["*"]
 }'
 
-curl -X POST https://comfortage.vercel.app/api/v1/hash/upload \
+curl -s -X POST "$BASE_URL/api/v1/hash/upload" \
   -H "Authorization: Bearer $TOKEN" \
-  -F "file=@mfu7_vital_signs.csv;type=text/csv" \
-  -F "datasetId=MFU-7-VITALS-001" \
+  -F "file=@synthetic_dataset.csv;type=text/csv" \
+  -F "datasetId=SYNTHETIC-ACCESS-001" \
   -F "recordType=LAB_RESULT" \
-  -F "columnPolicy=$POLICY"
+  -F "columnPolicy=$POLICY" | jq .
 ```
 
-**PowerShell:**
-```powershell
-$policy = '{"name":["doctor","admin"],"date_of_birth":["doctor","admin"],"diagnosis":["doctor","admin"],"blood_pressure":["*"],"heart_rate":["*"]}'
+PowerShell:
 
-$form = @{
-  datasetId    = "MFU-7-VITALS-001"
-  recordType   = "LAB_RESULT"
-  columnPolicy = $policy
-}
-# Use curl.exe for multipart with file in PowerShell
-curl.exe -X POST https://comfortage.vercel.app/api/v1/hash/upload `
+```powershell
+$policy = @{
+  participant_name = @("doctor", "admin")
+  date_of_birth    = @("doctor", "admin")
+  diagnosis        = @("doctor", "admin")
+  medication       = @("doctor", "pharmacist", "admin")
+  consent_notes    = @("consent_officer", "admin")
+  heart_rate       = @("*")
+  blood_pressure   = @("*")
+  steps            = @("*")
+} | ConvertTo-Json -Compress
+
+curl.exe -s -X POST "$BASE_URL/api/v1/hash/upload" `
   -H "Authorization: Bearer $TOKEN" `
-  -F "file=@mfu7_vital_signs.csv;type=text/csv" `
-  -F "datasetId=MFU-7-VITALS-001" `
+  -F "file=@C:\path\to\synthetic_dataset.csv;type=text/csv" `
+  -F "datasetId=SYNTHETIC-ACCESS-001" `
   -F "recordType=LAB_RESULT" `
   -F "columnPolicy=$policy"
 ```
 
----
+## 7. Retrieve Data With Role Filtering Applied
 
-## 5. Retrieve a File (with Column Filtering Applied)
+The API filters CSV columns automatically based on the logged-in user's role.
 
 ```bash
-curl -s https://comfortage.vercel.app/api/v1/hash/DATASET-ID/data \
+curl -s "$BASE_URL/api/v1/hash/SYNTHETIC-ACCESS-001/data" \
   -H "Authorization: Bearer $TOKEN" | jq .
 ```
 
-The API automatically filters columns based on the caller's role. A nurse calling this endpoint will not see columns restricted to doctors.
+Expected CSV response shape:
 
-**Example response (nurse view):**
 ```json
 {
   "success": true,
   "data": {
-    "datasetId": "MFU-7-VITALS-001",
+    "datasetId": "SYNTHETIC-ACCESS-001",
     "callerRole": "nurse",
-    "visibleColumns": ["blood_pressure","heart_rate","weight"],
-    "restrictedColumns": ["name","date_of_birth","diagnosis"],
-    "rows": [
-      { "blood_pressure": "120/80", "heart_rate": "72", "weight": "68" }
-    ]
+    "visibleColumns": ["heart_rate", "blood_pressure", "steps"],
+    "restrictedColumns": ["participant_name", "date_of_birth", "diagnosis"],
+    "totalColumns": 6,
+    "rows": []
   }
 }
 ```
 
----
-
-## 6. Check a Dataset Exists / Get Hash Record
+## 8. Lookup Dataset Metadata
 
 ```bash
-curl -s https://comfortage.vercel.app/api/v1/hash/MFU-7-VITALS-001 \
+curl -s "$BASE_URL/api/v1/hash/SYNTHETIC-ACCESS-001" \
   -H "Authorization: Bearer $TOKEN" | jq .
 ```
 
----
+## 9. View Version History
 
-## 7. Batch Upload Script — MFU / AMI / INTRAS Datasets
+```bash
+curl -s "$BASE_URL/api/v1/hash/history/SYNTHETIC-ACCESS-001" \
+  -H "Authorization: Bearer $TOKEN" | jq .
+```
 
-Save this as `batch_upload.sh`, edit the file paths and dataset IDs, then run with `bash batch_upload.sh`.
+## 10. Update an Existing Dataset Hash
+
+Use this when a dataset changes and you need a new on-chain version. If the file itself is changing, prefer uploading through the UI or upload endpoint so the IPFS CID is refreshed too.
+
+```bash
+NEW_HASH="0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+NEW_CID="QmExampleNewMetadataCid"
+
+curl -s -X PUT "$BASE_URL/api/v1/hash/SYNTHETIC-ACCESS-001" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"hash\":\"$NEW_HASH\",\"metadataCID\":\"$NEW_CID\"}" | jq .
+```
+
+## 11. Check Local File Integrity
+
+This is read-only. It does not create an on-chain transaction.
+
+WSL Bash:
+
+```bash
+HASH="0x$(sha256sum synthetic_dataset.csv | awk '{print $1}')"
+
+curl -s "$BASE_URL/api/v1/hash/check/SYNTHETIC-ACCESS-001/$HASH" \
+  -H "Authorization: Bearer $TOKEN" | jq .
+```
+
+PowerShell:
+
+```powershell
+$hash = "0x" + (Get-FileHash "C:\path\to\synthetic_dataset.csv" -Algorithm SHA256).Hash.ToLower()
+
+Invoke-RestMethod -Uri "$BASE_URL/api/v1/hash/check/SYNTHETIC-ACCESS-001/$hash" `
+  -Headers @{ Authorization = "Bearer $TOKEN" }
+```
+
+## 12. Doctor Validation Event
+
+Login as a doctor first.
+
+```bash
+TOKEN=$(curl -s -X POST "$BASE_URL/api/v1/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"dr.emily.chen@comfortage.health","password":"Doctor@Emily2024!"}' \
+  | jq -r '.token')
+
+curl -s -X POST "$BASE_URL/api/v1/hash/validate" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"datasetId":"SYNTHETIC-ACCESS-001","hash":"0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}' | jq .
+```
+
+## 13. Audit Summary
+
+Login as an auditor or admin.
+
+```bash
+TOKEN=$(curl -s -X POST "$BASE_URL/api/v1/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"claire.dubois@comfortage.health","password":"Audit@Claire2024!"}' \
+  | jq -r '.token')
+
+curl -s "$BASE_URL/api/v1/hash/audit/summary" \
+  -H "Authorization: Bearer $TOKEN" | jq .
+```
+
+## 14. Batch Upload From WSL Bash
+
+Create `batch_upload.sh`:
 
 ```bash
 #!/usr/bin/env bash
-# COMFORTage T3.3 — Batch Upload Script
-# Edit BASE_URL, credentials, file paths, and dataset IDs before running.
+set -euo pipefail
 
-BASE_URL="https://comfortage.vercel.app"
-EMAIL="sara.johnson@comfortage.health"
-PASSWORD="Nurse@Sara2024!"
+BASE_URL="${BASE_URL:-http://localhost:3000}"
+EMAIL="${EMAIL:-sara.johnson@comfortage.health}"
+PASSWORD="${PASSWORD:-Nurse@Sara2024!}"
 
-# ── Login ──────────────────────────────────────────────────────────
-echo "Logging in..."
 TOKEN=$(curl -s -X POST "$BASE_URL/api/v1/auth/login" \
   -H "Content-Type: application/json" \
   -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}" \
   | jq -r '.token')
 
 if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-  echo "ERROR: Login failed. Check credentials."
+  echo "Login failed"
   exit 1
 fi
-echo "Login OK."
 
-# ── Helper function ─────────────────────────────────────────────────
-upload() {
-  local FILE="$1"
-  local DATASET_ID="$2"
-  local RECORD_TYPE="$3"
-  local POLICY="$4"   # optional JSON string
+upload_csv() {
+  local file="$1"
+  local dataset_id="$2"
+  local record_type="$3"
+  local policy="$4"
 
-  echo ""
-  echo "Uploading: $FILE → $DATASET_ID ($RECORD_TYPE)"
+  echo "Uploading $dataset_id from $file"
 
-  if [ -n "$POLICY" ]; then
-    RESULT=$(curl -s -X POST "$BASE_URL/api/v1/hash/upload" \
-      -H "Authorization: Bearer $TOKEN" \
-      -F "file=@$FILE" \
-      -F "datasetId=$DATASET_ID" \
-      -F "recordType=$RECORD_TYPE" \
-      -F "columnPolicy=$POLICY")
-  else
-    RESULT=$(curl -s -X POST "$BASE_URL/api/v1/hash/upload" \
-      -H "Authorization: Bearer $TOKEN" \
-      -F "file=@$FILE" \
-      -F "datasetId=$DATASET_ID" \
-      -F "recordType=$RECORD_TYPE")
-  fi
-
-  STATUS=$(echo "$RESULT" | jq -r '.data.status // .error')
-  TX=$(echo "$RESULT" | jq -r '.data.transactionHash // "n/a"')
-  CID=$(echo "$RESULT" | jq -r '.data.fileCid // "n/a"')
-  echo "  Status: $STATUS"
-  echo "  TX:     $TX"
-  echo "  CID:    $CID"
+  curl -s -X POST "$BASE_URL/api/v1/hash/upload" \
+    -H "Authorization: Bearer $TOKEN" \
+    -F "file=@$file;type=text/csv" \
+    -F "datasetId=$dataset_id" \
+    -F "recordType=$record_type" \
+    -F "columnPolicy=$policy" | jq .
 }
 
-# ── MFU #7 — Vital Signs, Lab Results, Care Plans ──────────────────
-MFU_POLICY='{
-  "name":              ["doctor","admin"],
-  "date_of_birth":     ["doctor","admin"],
-  "past_conditions":   ["doctor","admin"],
-  "chronic_diseases":  ["doctor","admin"],
-  "diagnosis":         ["doctor","admin"],
-  "stage_progression": ["doctor","admin"],
-  "blood_pressure":    ["*"],
-  "heart_rate":        ["*"],
-  "temperature":       ["*"],
-  "weight":            ["*"],
-  "medications":       ["doctor","pharmacist","admin"],
-  "care_plan":         ["doctor","nurse","admin"]
+COMMON_POLICY='{
+  "participant_name":["doctor","admin"],
+  "date_of_birth":["doctor","admin"],
+  "diagnosis":["doctor","admin"],
+  "medication":["doctor","pharmacist","admin"],
+  "consent_notes":["consent_officer","admin"],
+  "heart_rate":["*"],
+  "blood_pressure":["*"],
+  "steps":["*"]
 }'
 
-upload "data/mfu7_vital_signs.csv"   "MFU-7-VITALS-001"   "LAB_RESULT"  "$MFU_POLICY"
-upload "data/mfu7_lab_results.csv"   "MFU-7-LAB-001"      "LAB_RESULT"  "$MFU_POLICY"
-upload "data/mfu7_care_plans.csv"    "MFU-7-CARE-001"     "DIAGNOSIS"   "$MFU_POLICY"
-upload "data/mfu7_therapies.csv"     "MFU-7-THERAPY-001"  "DIAGNOSIS"   ""
-
-# ── AMI #10 — Medications, Vital Signs, Exercise ───────────────────
-AMI_POLICY='{
-  "name":              ["doctor","admin"],
-  "date_of_birth":     ["doctor","admin"],
-  "current_medications": ["doctor","pharmacist","admin"],
-  "past_medications":  ["doctor","pharmacist","admin"],
-  "dosages":           ["doctor","pharmacist","admin"],
-  "blood_pressure":    ["*"],
-  "heart_rate":        ["*"],
-  "weight":            ["*"],
-  "exercise":          ["*"]
-}'
-
-upload "data/ami10_medications.csv"  "AMI-10-MEDS-001"    "PRESCRIPTION" "$AMI_POLICY"
-upload "data/ami10_vital_signs.csv"  "AMI-10-VITALS-001"  "LAB_RESULT"   "$AMI_POLICY"
-
-# ── INTRAS #11 — Full Dementia Dataset ─────────────────────────────
-INTRAS_POLICY='{
-  "name":              ["doctor","admin"],
-  "date_of_birth":     ["doctor","admin"],
-  "diagnosis":         ["doctor","admin"],
-  "stage_progression": ["doctor","admin"],
-  "past_conditions":   ["doctor","admin"],
-  "chronic_diseases":  ["doctor","admin"],
-  "current_medications": ["doctor","pharmacist","admin"],
-  "dosages":           ["doctor","pharmacist","admin"],
-  "family_history":    ["doctor","admin"],
-  "living_conditions": ["doctor","nurse","admin"],
-  "social_history":    ["doctor","nurse","admin"],
-  "blood_pressure":    ["*"],
-  "heart_rate":        ["*"],
-  "weight":            ["*"],
-  "consent_data_sharing": ["consent_officer","admin"],
-  "research_participation": ["consent_officer","admin"]
-}'
-
-upload "data/intras11_full_dataset.csv" "INTRAS-11-FULL-001" "DIAGNOSIS" "$INTRAS_POLICY"
-
-echo ""
-echo "Batch upload complete."
+upload_csv "./data/synthetic_dataset.csv" "SYNTHETIC-ACCESS-001" "LAB_RESULT" "$COMMON_POLICY"
+upload_csv "./data/mfu7_vital_signs.csv" "MFU-7-VITALS-001" "LAB_RESULT" "$COMMON_POLICY"
 ```
 
----
-
-## 8. View Upload History for a Dataset
+Run it:
 
 ```bash
-curl -s https://comfortage.vercel.app/api/v1/hash/history/MFU-7-VITALS-001 \
-  -H "Authorization: Bearer $TOKEN" | jq .
+chmod +x batch_upload.sh
+./batch_upload.sh
 ```
 
----
+## 15. Batch Upload From PowerShell
 
-## 9. Verify File Integrity (read-only, no transaction)
+Create `batch_upload.ps1`:
 
-```bash
-# Provide the datasetId and the SHA-256 hash of your local file
-HASH=$(sha256sum my_file.csv | awk '{print "0x"$1}')
+```powershell
+$BASE_URL = "http://localhost:3000"
+$EMAIL = "sara.johnson@comfortage.health"
+$PASSWORD = "Nurse@Sara2024!"
 
-curl -s "https://comfortage.vercel.app/api/v1/hash/check/MFU-7-VITALS-001/$HASH" \
-  -H "Authorization: Bearer $TOKEN" | jq .
+$login = Invoke-RestMethod -Uri "$BASE_URL/api/v1/auth/login" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body (@{ email = $EMAIL; password = $PASSWORD } | ConvertTo-Json)
+
+$TOKEN = $login.token
+
+$policy = @{
+  participant_name = @("doctor", "admin")
+  date_of_birth    = @("doctor", "admin")
+  diagnosis        = @("doctor", "admin")
+  medication       = @("doctor", "pharmacist", "admin")
+  consent_notes    = @("consent_officer", "admin")
+  heart_rate       = @("*")
+  blood_pressure   = @("*")
+  steps            = @("*")
+} | ConvertTo-Json -Compress
+
+function Upload-CsvDataset($File, $DatasetId, $RecordType) {
+  Write-Host "Uploading $DatasetId from $File"
+  curl.exe -s -X POST "$BASE_URL/api/v1/hash/upload" `
+    -H "Authorization: Bearer $TOKEN" `
+    -F "file=@$File;type=text/csv" `
+    -F "datasetId=$DatasetId" `
+    -F "recordType=$RecordType" `
+    -F "columnPolicy=$policy"
+}
+
+Upload-CsvDataset "C:\path\to\synthetic_dataset.csv" "SYNTHETIC-ACCESS-001" "LAB_RESULT"
+Upload-CsvDataset "C:\path\to\mfu7_vital_signs.csv" "MFU-7-VITALS-001" "LAB_RESULT"
 ```
 
----
+Run it:
 
-## 10. Audit Summary (auditor / admin only)
-
-```bash
-# Login as auditor first
-TOKEN=$(curl -s -X POST https://comfortage.vercel.app/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"claire.dubois@comfortage.health","password":"Audit@Claire2024!"}' \
-  | jq -r '.token')
-
-curl -s https://comfortage.vercel.app/api/v1/hash/audit/summary \
-  -H "Authorization: Bearer $TOKEN" | jq .
+```powershell
+powershell -ExecutionPolicy Bypass -File .\batch_upload.ps1
 ```
 
----
+## 16. Recommended Workflow for Partner Data
 
-## Column Policy Quick Reference
+1. Start with one small CSV.
+2. Upload it with a simple `columnPolicy`.
+3. Login as nurse, doctor, pharmacist, consent officer, auditor, and admin.
+4. Call `/data` for the same dataset with each token.
+5. Confirm each role sees only the intended columns.
+6. Batch upload the remaining datasets.
+7. Check history for a few datasets.
+8. Run an integrity check against the local files.
+9. Take screenshots from `/app` once data is visible in the GUI.
 
-```
-"*"                     → all roles can see this column
-["doctor","admin"]      → only doctors and admins
-["doctor","pharmacist"] → doctors and pharmacists only
-["*"]                   → same as no restriction
-```
+## 17. Future-Proofing for Agentic AI Access
 
-Columns **not listed** in the policy are visible to **everyone**.  
-The `admin` role always sees all columns regardless of policy.
+If AI agents are later allowed to access COMFORTage data, use the same role-filtered `/data` endpoint rather than direct IPFS gateway access. Recommended future additions:
+
+- Dedicated `agent` or `research_agent` roles.
+- Read-only scoped API tokens.
+- Dataset-level allowlists for agents.
+- Column-level policy presets for AI workflows.
+- Audit logging for every agent data retrieval.
+- Rate limits and purpose-bound access labels.
+
+This prevents agents from seeing columns or files outside their assigned role and keeps the access pattern auditable.
