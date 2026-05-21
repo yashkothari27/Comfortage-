@@ -13,8 +13,7 @@
     "seed": "node scripts/seed-users.js"
   },
   "dependencies": {
-    "bcrypt": "^5.1.1",
-    "better-sqlite3": "^11.10.0",
+    "sql.js": "^1.8.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "ethers": "^6.16.0",

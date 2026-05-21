@@ -1,6 +1,6 @@
 const express = require("express");
 const { body, validationResult } = require("express-validator");
-const bcrypt = require("bcrypt");
+const { hashPassword, comparePassword } = require("../utils/passwordUtils");
 const db = require("../db/database");
 const { generateWallet, encryptPrivateKey } = require("../services/walletService");
 const { issueToken, authenticateToken } = require("../middleware/auth");
@@ -39,7 +39,7 @@ router.post(
       }
 
       // Hash password
-      const passwordHash = await bcrypt.hash(password, 12);
+      const passwordHash = await hashPassword(password);
 
       // Generate wallet — user never sees the private key
       const { address, privateKey } = generateWallet();
@@ -95,7 +95,7 @@ router.post(
         return res.status(401).json({ error: "Invalid email or password." });
       }
 
-      const match = await bcrypt.compare(password, user.password_hash);
+      const match = await comparePassword(password, user.password_hash);
       if (!match) {
         logger.warn(`Failed login attempt for ${email}`);
         return res.status(401).json({ error: "Invalid email or password." });

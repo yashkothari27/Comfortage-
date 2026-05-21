@@ -1,9 +1,7 @@
-const bcrypt = require("bcrypt");
+const { hashPassword } = require("../src/utils/passwordUtils");
 const db = require("../src/db/database");
 const { encryptPrivateKey } = require("../src/services/walletService");
 const { ethers } = require("ethers");
-
-const SALT_ROUNDS = 12;
 
 // These wallets are pre-authorized on the Reltime Mainnet contract.
 // Nurse/IoT → INGESTION_ROLE, Doctor → VALIDATOR_ROLE, etc.
@@ -32,7 +30,7 @@ const testUsers = [
   { email: "peter.kowalski@comfortage.health", password: "Audit@Peter2024!",      fullName: "Peter Kowalski",    role: "auditor",          privateKey: "0x7e877bb718e6942360ac0e6f0a19df75d2de475aa15ad98d5abc148d58bb1bf3" },
 ];
 
-function seedUsers(silent = false) {
+async function seedUsers(silent = false) {
   const upsert = db.prepare(`
     INSERT INTO users
       (email, password_hash, full_name, role, wallet_address, encrypted_private_key, wallet_iv, wallet_auth_tag)
@@ -49,7 +47,7 @@ function seedUsers(silent = false) {
   `);
 
   for (const u of testUsers) {
-    const hash = bcrypt.hashSync(u.password, SALT_ROUNDS);
+    const hash = await hashPassword(u.password);
     const pk = u.privateKey ?? ethers.Wallet.createRandom().privateKey;
     const address = new ethers.Wallet(pk).address;
     const { encrypted, iv, authTag } = encryptPrivateKey(pk);
@@ -64,6 +62,14 @@ module.exports = { seedUsers };
 
 // Run directly: node scripts/seed-users.js
 if (require.main === module) {
-  seedUsers();
-  process.exit(0);
+  (async () => {
+    try {
+      await db.init();
+      await seedUsers();
+      process.exit(0);
+    } catch (err) {
+      console.error("Seeding failed:", err);
+      process.exit(1);
+    }
+  })();
 }

@@ -90,7 +90,7 @@ app.get("/docs", (_req, res) => {
 <body>
 <div class="swagger-ui-wrap">
   <div class="api-header">
-    <img src="/comfortage-logo.svg" alt="COMFORTage Logo">
+    <img src="/comfortage-positivo-color.svg" alt="COMFORTage Logo">
     <a href="/cli-guide" style="position:absolute;right:170px;background:#2563eb;color:#fff;padding:8px 18px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">💻 CLI Guide</a>
     <a href="/guide" style="position:absolute;right:24px;background:#e94e1b;color:#fff;padding:8px 18px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">📖 Testing Guide</a>
   </div>
@@ -217,39 +217,56 @@ app.use((err, req, res, next) => {
 const db = require("./db/database");
 const { seedUsers } = require("../scripts/seed-users");
 
-// Auto-seed test users if DB is empty (Vercel /tmp resets on every cold start)
-const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get().count;
-if (userCount === 0) {
+// Start server with async initialization
+async function startServer() {
   try {
-    seedUsers(true);
-    logger.info("Test users auto-seeded (fresh database)");
-  } catch (err) {
-    logger.error("Auto-seed failed:", err.message, err.stack);
-  }
-}
+    // Initialize database
+    await db.init();
+    logger.info("Database initialized");
 
-blockchainService.initialize()
-  .then(() => logger.info("Blockchain service initialized successfully"))
-  .catch((error) => {
-    logger.error("Blockchain initialization failed:", error.message);
+    // Auto-seed test users if DB is empty
+    const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get()?.count || 0;
+    if (userCount === 0) {
+      try {
+        await seedUsers(true);
+        logger.info("Test users auto-seeded (fresh database)");
+      } catch (err) {
+        logger.error("Auto-seed failed:", err.message, err.stack);
+      }
+    }
+
+    // Initialize blockchain service
+    await blockchainService.initialize();
+    logger.info("Blockchain service initialized successfully");
+  } catch (error) {
+    logger.error("Initialization failed:", error.message);
     if (error.stack) logger.error("Stack trace:", error.stack);
-  });
+  }
 
-// ── Local dev: start HTTP server only when run directly ──
-if (require.main === module) {
-  console.log(`
+  // Start HTTP server only when run directly
+  if (require.main === module) {
+    console.log(`
   ╔═══════════════════════════════════════════════════════════╗
   ║   COMFORTage T3.3 — Blockchain Data Integrity Service    ║
   ║   Network: Reltime Mainnet (Chain ID: 32323)              ║
   ╚═══════════════════════════════════════════════════════════╝
   `);
-  app.listen(config.port, () => {
-    logger.info(`API server running on port ${config.port}`);
-    logger.info(`Health check: http://localhost:${config.port}/health`);
-    logger.info(`API docs:     http://localhost:${config.port}/docs`);
-    logger.info(`API base:     http://localhost:${config.port}/api/v1/hash`);
-  });
+    app.listen(config.port, () => {
+      logger.info(`API server running on port ${config.port}`);
+      logger.info(`Health check: http://localhost:${config.port}/health`);
+      logger.info(`API docs:     http://localhost:${config.port}/docs`);
+      logger.info(`API base:     http://localhost:${config.port}/api/v1/hash`);
+    });
+  }
 }
+
+// Auto-seed test users if DB is empty (Vercel /tmp resets on every cold start)
+// This will be handled in startServer() now
+
+startServer().catch(err => {
+  logger.error("Failed to start server:", err);
+  process.exit(1);
+});
 
 // ── Vercel serverless export ──
 module.exports = app;
