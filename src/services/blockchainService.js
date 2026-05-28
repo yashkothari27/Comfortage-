@@ -384,11 +384,12 @@ class BlockchainService {
     await this._ensureConnected();
 
     const ROLE_MAP = {
-      nurse:           this.contract.INGESTION_ROLE,
-      doctor:          this.contract.VALIDATOR_ROLE,
-      pharmacist:      this.contract.PHARMACIST_ROLE,
-      consent_manager: this.contract.CONSENT_MANAGER_ROLE,
-      auditor:         this.contract.AUDITOR_ROLE,
+      nurse:            this.contract.INGESTION_ROLE,
+      doctor:           this.contract.VALIDATOR_ROLE,
+      pharmacist:       this.contract.PHARMACIST_ROLE,
+      consent_officer:  this.contract.CONSENT_MANAGER_ROLE,
+      consent_manager:  this.contract.CONSENT_MANAGER_ROLE,
+      auditor:          this.contract.AUDITOR_ROLE,
     };
 
     const roleFn = ROLE_MAP[roleKey];

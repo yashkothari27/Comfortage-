@@ -103,6 +103,29 @@ router.post(
 );
 
 // ═══════════════════════════════════════════════════════════════════
+// GET /api/v1/hash/list — List datasets from local DB
+//   Returns all tracked datasets; marks which ones belong to the caller.
+// Roles: all authenticated
+// ═══════════════════════════════════════════════════════════════════
+router.get("/list", async (req, res) => {
+  try {
+    const userId = Number(req.user.userId);
+    const rows = db.prepare(`
+      SELECT d.dataset_id, d.record_type, d.filename, d.uploaded_at,
+             d.uploaded_by, u.full_name as uploader_name
+      FROM datasets d
+      JOIN users u ON u.id = d.uploaded_by
+      ORDER BY d.uploaded_at DESC
+    `).all();
+    const result = rows.map(r => ({ ...r, is_mine: Number(r.uploaded_by) === userId }));
+    res.json({ success: true, data: result });
+  } catch (e) {
+    logger.error(`GET /hash/list failed: ${e.message}`);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
 // GET /api/v1/hash/:datasetId — Retrieve the stored hash
 // Roles: all authenticated
 // ═══════════════════════════════════════════════════════════════════
@@ -247,8 +270,11 @@ router.get(
   async (req, res) => {
     try {
       logger.info(`GET /hash/audit/summary — from: ${req.user?.email}`);
-      const privateKey = getUserPrivateKey(req.user.userId);
-      const summary = await blockchainService.getAuditSummaryAs(privateKey);
+      // Admin has no on-chain role; use the deployer signer which holds AUDITOR_ROLE.
+      // Auditors call with their own wallet.
+      const summary = req.user.role === 'admin'
+        ? await blockchainService.getAuditSummary()
+        : await blockchainService.getAuditSummaryAs(getUserPrivateKey(req.user.userId));
       res.json({ success: true, data: summary });
     } catch (error) {
       logger.error(`GET /hash/audit/summary failed: ${error.message}`);
@@ -319,6 +345,13 @@ router.post(
       const recordTypeIndex = RECORD_TYPE_INDEX[recordType];
       const privateKey = getUserPrivateKey(req.user.userId);
       const result = await blockchainService.storeHashAs(privateKey, datasetId, hash, metadataCID, recordTypeIndex);
+
+      // 5. Track in local DB for listing
+      try {
+        db.prepare("INSERT OR IGNORE INTO datasets (dataset_id, record_type, filename, uploaded_by) VALUES (?, ?, ?, ?)").run(datasetId, recordType, req.file.originalname, req.user.userId);
+      } catch (dbErr) {
+        logger.warn(`Failed to save dataset to local DB: ${dbErr.message}`);
+      }
 
       res.status(201).json({
         success: true,

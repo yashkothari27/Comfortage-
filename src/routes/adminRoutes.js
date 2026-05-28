@@ -10,7 +10,7 @@ const router = express.Router();
 // All admin routes require admin role
 router.use(authorizeRole("admin"));
 
-const VALID_ROLES = ["nurse", "doctor", "pharmacist", "consent_manager", "auditor", "admin", "pending"];
+const VALID_ROLES = ["nurse", "doctor", "pharmacist", "consent_officer", "auditor", "admin", "pending"];
 
 const validate = (req, res, next) => {
   const errors = validationResult(req);
@@ -96,7 +96,7 @@ router.put(
 
       // Grant on-chain role (only for non-admin/non-pending roles that have on-chain equivalents)
       let onChainTx = null;
-      const ON_CHAIN_ROLES = ["nurse", "doctor", "pharmacist", "consent_manager", "auditor"];
+      const ON_CHAIN_ROLES = ["nurse", "doctor", "pharmacist", "consent_officer", "auditor"];
       if (ON_CHAIN_ROLES.includes(role)) {
         onChainTx = await blockchainService.grantUserRole(role, user.wallet_address);
         logger.info(`On-chain role granted: tx ${onChainTx.transactionHash}`);

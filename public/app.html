@@ -1293,6 +1293,46 @@ body.reduce-motion * {
   </div>
 </div>
 
+<!-- Add User Modal -->
+<div class="modal-overlay" id="modal-add-user">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h3 class="brand-font">Add New User</h3>
+      <button class="modal-close" onclick="closeModal('modal-add-user')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="add-user-error" class="alert alert-error" style="display:none;margin-bottom:16px"></div>
+      <div class="field">
+        <label>Full Name <span style="color:var(--red)">*</span></label>
+        <input type="text" id="add-user-name" placeholder="Jane Doe">
+      </div>
+      <div class="field">
+        <label>Email Address <span style="color:var(--red)">*</span></label>
+        <input type="email" id="add-user-email" placeholder="jane@comfortage.health">
+      </div>
+      <div class="field">
+        <label>Password <span style="color:var(--red)">*</span></label>
+        <input type="password" id="add-user-password" placeholder="Min. 8 characters">
+      </div>
+      <div class="field">
+        <label>Role</label>
+        <select id="add-user-role">
+          <option value="pending">pending (assign later)</option>
+          <option value="nurse">nurse</option>
+          <option value="doctor">doctor</option>
+          <option value="pharmacist">pharmacist</option>
+          <option value="consent_officer">consent_officer</option>
+          <option value="auditor">auditor</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-user')">Cancel</button>
+      <button class="btn btn-primary" id="add-user-btn" onclick="submitAddUser()">Create User</button>
+    </div>
+  </div>
+</div>
+
 <!-- Update Hash Modal -->
 <div class="modal-overlay" id="modal-update">
   <div class="modal" style="max-width:500px">
@@ -1506,20 +1546,10 @@ async function renderDashboard() {
       </div>
     </section>
     <div class="stats-grid" id="stats-grid">
-      <div class="stat-card"><div class="stat-icon blue">#</div><div class="stat-info"><h3>-</h3><p>Total On-Chain Records</p></div></div>
-      <div class="stat-card"><div class="stat-icon teal">CID</div><div class="stat-info"><h3>-</h3><p>IPFS Files Stored</p></div></div>
+      <div class="stat-card"><div class="stat-icon blue">#</div><div class="stat-info"><h3 id="stat-records">…</h3><p>Total On-Chain Records</p></div></div>
+      <div class="stat-card"><div class="stat-icon teal">CID</div><div class="stat-info"><h3 id="stat-ipfs">…</h3><p>IPFS Files Stored</p></div></div>
       <div class="stat-card"><div class="stat-icon green">OK</div><div class="stat-info"><h3>Live</h3><p>Blockchain Status</p></div></div>
       <div class="stat-card"><div class="stat-icon amber">RB</div><div class="stat-info"><h3>${role || '-'}</h3><p>Your Access Role</p></div></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><span class="card-title">Quick Actions</span></div>
-      <div class="card-body quick-action-grid">
-        ${CAN_UPLOAD.includes(role) ? `<button class="btn btn-primary" onclick="navigate('upload')">Upload File</button>` : ''}
-        <button class="btn btn-secondary" onclick="navigate('datasets')">Browse Datasets</button>
-        <button class="btn btn-secondary" onclick="navigate('check')">Verify Integrity</button>
-        ${CAN_VALIDATE.includes(role) ? `<button class="btn btn-secondary" onclick="navigate('validate')">Validate Hash</button>` : ''}
-        ${CAN_AUDIT.includes(role) ? `<button class="btn btn-secondary" onclick="navigate('audit')">Audit Summary</button>` : ''}
-      </div>
     </div>
     <div class="card mt-6">
       <div class="card-header"><span class="card-title">Your Role Permissions</span></div>
@@ -1527,6 +1557,23 @@ async function renderDashboard() {
     </div>
   `);
   renderRolePermissions();
+  loadDashboardStats();
+}
+
+async function loadDashboardStats() {
+  try {
+    const h = await fetch('/health').then(r => r.json());
+    const total = h.totalRecords ?? '-';
+    const recEl = document.getElementById('stat-records');
+    const ipfsEl = document.getElementById('stat-ipfs');
+    if (recEl) recEl.textContent = total;
+    if (ipfsEl) ipfsEl.textContent = total;
+  } catch {
+    const recEl = document.getElementById('stat-records');
+    const ipfsEl = document.getElementById('stat-ipfs');
+    if (recEl) recEl.textContent = '-';
+    if (ipfsEl) ipfsEl.textContent = '-';
+  }
 }
 
 function renderRolePermissions() {
@@ -1794,30 +1841,80 @@ async function submitUpload() {
 // ══════════════════════════════════════════════════════
 // DATASETS BROWSER
 // ══════════════════════════════════════════════════════
-function renderDatasets() {
+async function renderDatasets() {
   setMain(`
     <div class="page-header">
       <div class="page-kicker">Dataset explorer</div>
       <h2>Browse Datasets</h2>
       <p>Look up any dataset by ID to view its on-chain record, IPFS file, data policy, and version history.</p>
     </div>
-    <div class="search-panel mb-4">
+    <div id="dataset-list-section">
+      <div style="text-align:center;padding:32px"><div class="spinner spinner-dark"></div></div>
+    </div>
+    <div class="search-panel mb-4" style="margin-top:24px">
       <div class="page-kicker">On-chain lookup</div>
       <div class="search-row">
-        <input type="text" id="ds-search" placeholder="Enter Dataset ID (e.g. MFU-7-VITALS-001)" onkeydown="if(e.key==='Enter')lookupDataset()">
+        <input type="text" id="ds-search" placeholder="Enter Dataset ID (e.g. MFU-7-VITALS-001)">
         <button class="btn btn-primary" onclick="lookupDataset()">Look Up</button>
       </div>
     </div>
     <div id="ds-result"></div>
-    <div class="card">
-      <div class="card-header"><span class="card-title">Example Dataset IDs to Try</span></div>
-      <div class="card-body example-chips">
-        ${['MFU-7-VITALS-TEST-001','DATASET-UPLOAD-TEST'].map(id => `<button class="btn btn-ghost btn-sm" onclick="document.getElementById('ds-search').value='${id}';lookupDataset()">${id}</button>`).join('')}
-      </div>
-    </div>
   `);
-  // fix keydown reference
   document.getElementById('ds-search').addEventListener('keydown', e => { if(e.key==='Enter') lookupDataset(); });
+
+  try {
+    const data = await api('GET', '/api/v1/hash/list');
+    const datasets = data.data || [];
+    const myUploads = datasets.filter(d => d.is_mine);
+    const others = datasets.filter(d => !d.is_mine);
+
+    const makeCard = (d) => `
+      <div class="stat-card" style="cursor:pointer;flex-direction:column;align-items:flex-start;gap:6px"
+           onclick="document.getElementById('ds-search').value='${d.dataset_id}';lookupDataset()">
+        <div style="display:flex;align-items:center;gap:8px;width:100%;flex-wrap:wrap">
+          <span class="badge ${RECORD_TYPE_BADGE[d.record_type]||'badge-gray'}">${d.record_type||'—'}</span>
+          ${d.is_mine ? '<span class="badge badge-teal" style="margin-left:auto">Mine</span>' : ''}
+        </div>
+        <strong style="font-size:13px;color:var(--navy);word-break:break-all">${d.dataset_id}</strong>
+        <span style="font-size:11px;color:var(--muted)">${d.filename||''} · ${d.uploaded_at ? new Date(d.uploaded_at).toLocaleDateString() : ''}</span>
+      </div>`;
+
+    let html = '';
+    if (myUploads.length) {
+      html += `
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header">
+            <span class="card-title">Your Uploads</span>
+            <span style="font-size:12px;color:var(--muted)">${myUploads.length} dataset${myUploads.length!==1?'s':''}</span>
+          </div>
+          <div class="card-body">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
+              ${myUploads.map(makeCard).join('')}
+            </div>
+          </div>
+        </div>`;
+    }
+    if (others.length) {
+      html += `
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header">
+            <span class="card-title">All Accessible Datasets</span>
+            <span style="font-size:12px;color:var(--muted)">${others.length} dataset${others.length!==1?'s':''}</span>
+          </div>
+          <div class="card-body">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
+              ${others.map(makeCard).join('')}
+            </div>
+          </div>
+        </div>`;
+    }
+    if (!datasets.length) {
+      html = `<div class="card" style="margin-bottom:20px"><div class="card-body"><div class="empty-state" style="padding:32px"><div class="empty-icon">📁</div><h3>No datasets yet</h3><p>Upload a file to see it listed here.</p></div></div></div>`;
+    }
+    document.getElementById('dataset-list-section').innerHTML = html;
+  } catch(e) {
+    document.getElementById('dataset-list-section').innerHTML = `<div class="alert alert-error" style="margin-bottom:16px">Could not load dataset list: ${e.message}</div>`;
+  }
 }
 
 async function lookupDataset() {
@@ -2147,31 +2244,43 @@ async function renderUsers() {
   setMain(`<div class="page-header"><div class="page-kicker">Administration</div><h2>User Management</h2><p>View all users and manage their system roles.</p></div><div style="text-align:center;padding:40px"><div class="spinner spinner-dark"></div></div>`);
   try {
     const data = await api('GET', '/api/v1/admin/users');
-    const VALID_ROLES = ['nurse','doctor','pharmacist','consent_officer','auditor','admin','pending'];
+    const ASSIGNABLE_ROLES = ['nurse','doctor','pharmacist','consent_officer','auditor','pending'];
+    const myId = state.user?.userId;
     setMain(`
-      <div class="page-header">
-        <div class="page-kicker">Administration</div>
-        <h2>User Management</h2>
-        <p>${data.count} users registered in the system.</p>
+      <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div>
+          <div class="page-kicker">Administration</div>
+          <h2>User Management</h2>
+          <p>${data.count} users registered in the system.</p>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('modal-add-user')" style="margin-top:8px">+ Add User</button>
       </div>
       <div class="card">
         <div class="table-wrap">
           <table>
             <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Wallet</th><th>Joined</th><th>Actions</th></tr></thead>
             <tbody>
-              ${data.users.map(u => `
+              ${data.users.map(u => {
+                const isAdmin = u.role === 'admin';
+                const isSelf = u.id === myId;
+                return `
                 <tr>
-                  <td><strong>${u.fullName||'—'}</strong></td>
+                  <td><strong>${u.fullName||'—'}</strong>${isSelf ? ' <span style="font-size:10px;color:var(--muted)">(you)</span>' : ''}</td>
                   <td style="font-size:12px">${u.email}</td>
                   <td><span class="user-role-badge ${ROLE_COLORS[u.role]||'role-pending'}">${u.role}</span></td>
                   <td><span class="mono">${u.walletAddress ? u.walletAddress.slice(0,10)+'…' : 'None'}</span></td>
                   <td style="font-size:12px;color:var(--muted)">${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</td>
-                  <td>
-                    <select onchange="changeRole(${u.id},this.value,this)" style="padding:4px 8px;font-size:12px;border:1px solid var(--border);border-radius:6px;cursor:pointer">
-                      ${VALID_ROLES.map(r => `<option value="${r}" ${r===u.role?'selected':''}>${r}</option>`).join('')}
-                    </select>
+                  <td style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    ${isAdmin
+                      ? `<span style="font-size:12px;color:var(--muted);font-style:italic">Role locked</span>`
+                      : `<select onchange="changeRole(${u.id},this.value,this)" style="padding:4px 8px;font-size:12px;border:1px solid var(--border);border-radius:6px;cursor:pointer">
+                           ${ASSIGNABLE_ROLES.map(r => `<option value="${r}" ${r===u.role?'selected':''}>${r}</option>`).join('')}
+                         </select>
+                         <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id},'${escHtml(u.email)}')">Delete</button>`
+                    }
                   </td>
-                </tr>`).join('')}
+                </tr>`;
+              }).join('')}
             </tbody>
           </table>
         </div>
@@ -2179,6 +2288,51 @@ async function renderUsers() {
     `);
   } catch(e) {
     setMain(`<div class="page-header"><h2>User Management</h2></div><div class="alert alert-error">❌ ${e.message}</div>`);
+  }
+}
+
+async function deleteUser(userId, email) {
+  if (!confirm(`Delete user "${email}"? This cannot be undone.`)) return;
+  try {
+    await api('DELETE', `/api/v1/admin/users/${userId}`);
+    toast(`User ${email} deleted`, 'success');
+    renderUsers();
+  } catch(e) {
+    toast(`Delete failed: ${e.message}`, 'error');
+  }
+}
+
+async function submitAddUser() {
+  const email = document.getElementById('add-user-email').value.trim();
+  const password = document.getElementById('add-user-password').value;
+  const fullName = document.getElementById('add-user-name').value.trim();
+  const role = document.getElementById('add-user-role').value;
+  const errEl = document.getElementById('add-user-error');
+  errEl.style.display = 'none';
+  if (!email || !password || !fullName) { errEl.textContent = 'All fields are required.'; errEl.style.display = 'block'; return; }
+  const btn = document.getElementById('add-user-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    const reg = await fetch('/api/v1/auth/register', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, fullName })
+    });
+    const regData = await reg.json();
+    if (!reg.ok) throw new Error(regData.error || 'Registration failed');
+    const newUserId = regData.user?.id;
+    if (role !== 'pending' && newUserId) {
+      await api('PUT', `/api/v1/admin/users/${newUserId}/role`, { role });
+    }
+    toast(`User ${email} created`, 'success');
+    closeModal('modal-add-user');
+    document.getElementById('add-user-email').value = '';
+    document.getElementById('add-user-password').value = '';
+    document.getElementById('add-user-name').value = '';
+    renderUsers();
+  } catch(e) {
+    errEl.textContent = e.message; errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create User';
   }
 }
 

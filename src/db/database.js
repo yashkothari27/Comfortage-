@@ -55,6 +55,17 @@ const Database = {
       CREATE INDEX IF NOT EXISTS idx_users_email         ON users(email);
       CREATE INDEX IF NOT EXISTS idx_users_wallet_address ON users(wallet_address);
       CREATE INDEX IF NOT EXISTS idx_users_role           ON users(role);
+
+      CREATE TABLE IF NOT EXISTS datasets (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        dataset_id   TEXT    UNIQUE NOT NULL,
+        record_type  TEXT    NOT NULL,
+        filename     TEXT,
+        uploaded_by  INTEGER NOT NULL,
+        uploaded_at  TEXT    DEFAULT (datetime('now'))
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_datasets_uploaded_by ON datasets(uploaded_by);
     `);
 
     this.save();
