@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(./node_modules/.bin/hardhat compile *)"
+      "Bash(./node_modules/.bin/hardhat compile *)",
+      "Bash(node /private/tmp/claude-501/-Users-yashkothari-Downloads-Reltime-Comfortage-/459064b6-d363-4563-8a0b-81e34db18274/scratchpad/capture.js)"
     ]
   }
 }
