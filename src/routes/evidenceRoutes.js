@@ -13,13 +13,14 @@ const POLICY_DIR = path.join(__dirname, "../policies");
 // ponytail: derived key is fine for the pilot; set a dedicated EVIDENCE_SIGNING_KEY (or HSM/KMS) for production.
 function loadKey() {
   if (process.env.EVIDENCE_SIGNING_KEY) return crypto.createPrivateKey(process.env.EVIDENCE_SIGNING_KEY.replace(/\\n/g, "\n"));
-  const seed = crypto.createHash("sha256").update("comfortage-evidence:" + (process.env.JWT_SECRET || "")).digest();
+  if (!process.env.JWT_SECRET) return null; // never derive from an empty secret — signatures would be forgeable
+  const seed = crypto.createHash("sha256").update("comfortage-evidence:" + process.env.JWT_SECRET).digest();
   const der = Buffer.concat([Buffer.from("302e020100300506032b657004220420", "hex"), seed]);
   return crypto.createPrivateKey({ key: der, format: "der", type: "pkcs8" });
 }
 const privateKey = loadKey();
-const publicKey = crypto.createPublicKey(privateKey);
-const publicKeyPem = publicKey.export({ type: "spki", format: "pem" });
+const publicKey = privateKey && crypto.createPublicKey(privateKey);
+const publicKeyPem = publicKey && publicKey.export({ type: "spki", format: "pem" });
 
 const digestOf = (pack) => crypto.createHash("sha256").update(JSON.stringify(pack)).digest("hex");
 
@@ -37,6 +38,7 @@ router.get("/public-key", (_req, res) => res.json({ success: true, data: { alg: 
 
 // POST /api/v1/evidence/pack — sign pack + anchor its digest on-chain
 router.post("/pack", authorizeRole("auditor", "admin"), async (req, res) => {
+  if (!privateKey) return res.status(503).json({ success: false, error: "Evidence signing key not configured" });
   const pack = req.body?.pack;
   if (!pack || typeof pack !== "object") return res.status(400).json({ success: false, error: "pack object required" });
   const sha256 = digestOf(pack);
@@ -54,6 +56,7 @@ router.post("/pack", authorizeRole("auditor", "admin"), async (req, res) => {
 
 // POST /api/v1/evidence/verify — { pack, signature, anchorId } → signature + on-chain check
 router.post("/verify", async (req, res) => {
+  if (!publicKey) return res.status(503).json({ success: false, error: "Evidence signing key not configured" });
   const { pack, signature, anchorId } = req.body || {};
   if (!pack || !signature) return res.status(400).json({ success: false, error: "pack and signature required" });
   const sha256 = digestOf(pack);
