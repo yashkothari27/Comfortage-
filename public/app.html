@@ -1206,6 +1206,10 @@ body.reduce-motion * {
       <div class="nav-item" data-page="datasets" onclick="navigate('datasets')"><span class="nav-icon ic" data-icon="folder" data-size="18"></span> Browse Datasets</div>
       <div class="nav-item" data-page="check" onclick="navigate('check')"><span class="nav-icon ic" data-icon="search" data-size="18"></span> Check Integrity</div>
       <div class="nav-item" data-page="validate" onclick="navigate('validate')" id="nav-validate"><span class="nav-icon ic" data-icon="checkCircle" data-size="18"></span> Validate Hash</div>
+      <div class="nav-section">Governance</div>
+      <div class="nav-item" data-page="mgmt" onclick="navigate('mgmt')" id="nav-mgmt"><span class="nav-icon ic" data-icon="barChart" data-size="18"></span> Clinical Management</div>
+      <div class="nav-item" data-page="itops" onclick="navigate('itops')" id="nav-itops"><span class="nav-icon ic" data-icon="settings" data-size="18"></span> Hospital IT / ICT</div>
+      <div class="nav-item" data-page="regulatory" onclick="navigate('regulatory')" id="nav-regulatory"><span class="nav-icon ic" data-icon="activity" data-size="18"></span> Regulatory &amp; Incidents</div>
       <div class="nav-section">Administration</div>
       <div class="nav-item" data-page="audit" onclick="navigate('audit')" id="nav-audit"><span class="nav-icon ic" data-icon="clipboard" data-size="18"></span> Audit Summary</div>
       <div class="nav-item" data-page="users" onclick="navigate('users')" id="nav-users"><span class="nav-icon ic" data-icon="users" data-size="18"></span> Users</div>
@@ -1386,6 +1390,7 @@ const CAN_UPLOAD = ['nurse','pharmacist','consent_officer'];
 const CAN_VALIDATE = ['doctor'];
 const CAN_AUDIT = ['auditor','admin'];
 const CAN_ADMIN = ['admin'];
+const CAN_MGMT = ['doctor','auditor','admin'];
 const UPLOAD_RECORD_TYPES = {
   nurse: ['LAB_RESULT','DIAGNOSIS','IMAGING'],
   pharmacist: ['PRESCRIPTION'],
@@ -1467,6 +1472,9 @@ function startApp() {
   document.getElementById('nav-validate').style.display = CAN_VALIDATE.includes(u.role) ? 'flex' : 'none';
   document.getElementById('nav-audit').style.display = CAN_AUDIT.includes(u.role) ? 'flex' : 'none';
   document.getElementById('nav-users').style.display = CAN_ADMIN.includes(u.role) ? 'flex' : 'none';
+  document.getElementById('nav-mgmt').style.display = CAN_MGMT.includes(u.role) ? 'flex' : 'none';
+  document.getElementById('nav-itops').style.display = CAN_ADMIN.includes(u.role) ? 'flex' : 'none';
+  document.getElementById('nav-regulatory').style.display = CAN_AUDIT.includes(u.role) ? 'flex' : 'none';
   navigate('dashboard');
 }
 
@@ -1491,7 +1499,7 @@ function navigate(page) {
   document.querySelectorAll('.nav-item').forEach(el => {
     el.classList.toggle('active', el.dataset.page === page);
   });
-  const pages = { dashboard:renderDashboard, upload:renderUpload, datasets:renderDatasets, check:renderCheck, validate:renderValidate, audit:renderAudit, users:renderUsers };
+  const pages = { dashboard:renderDashboard, upload:renderUpload, datasets:renderDatasets, check:renderCheck, validate:renderValidate, audit:renderAudit, users:renderUsers, mgmt:renderMgmt, itops:renderItOps, regulatory:renderRegulatory };
   (pages[page] || renderDashboard)();
 }
 
@@ -2364,6 +2372,180 @@ async function changeRole(userId, newRole, selectEl) {
 // UTILITIES
 // ══════════════════════════════════════════════════════
 function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ══════════════════════════════════════════════════════
+// GOVERNANCE: Management / IT / Regulatory (T3.3 target state)
+// ponytail: consent, nodes, keys and incidents are simulated pilot data until backend endpoints exist;
+// dataset registry + health are live.
+// ══════════════════════════════════════════════════════
+const GOV = {
+  incidents: [
+    { id:'INC-2026-014', title:'Unauthorised EHR access attempt (ward 4 terminal)', type:'Security', impact:{ patients:120, hours:0.5, cross:false }, opened:Date.now()-2*3600e3, stage:'initial' },
+    { id:'INC-2026-013', title:'EHR provider API outage', type:'Availability', impact:{ patients:2400, hours:6, cross:true }, opened:Date.now()-30*3600e3, stage:'intermediate' },
+    { id:'INC-2026-011', title:'Clinical AI triage model drift > threshold', type:'AI Act', impact:{ patients:40, hours:1, cross:false }, opened:Date.now()-12*86400e3, stage:'final' },
+  ],
+  nodes: [
+    { name:'Validator node 1 (Oslo)', kind:'L1 validator', status:'online', latency:42 },
+    { name:'Validator node 2 (Bergen)', kind:'L1 validator', status:'online', latency:57 },
+    { name:'IPFS DePIN storage A', kind:'IPFS', status:'online', latency:88 },
+    { name:'IPFS DePIN storage B', kind:'IPFS', status:'degraded', latency:410 },
+    { name:'Wearable edge gateway', kind:'Edge', status:'online', latency:23 },
+  ],
+  keys: [
+    { id:'Contract signer (Hardhat deployer)', type:'ECDSA secp256k1', expires:'2027-03-01', perms:'UPLOADER_ROLE, AUDITOR_ROLE' },
+    { id:'API TLS certificate', type:'X.509 RSA-2048', expires:'2026-12-02', perms:'HTTPS termination' },
+    { id:'Evidence-pack signing key', type:'Ed25519', expires:'2027-06-30', perms:'Evidence export' },
+  ],
+  patch: { compliant:47, total:52 },
+};
+const CONSENT_STATES = ['Verified','Verified','Verified','Missing Consent','Flagged'];
+// Severity + deadlines come from versioned policy JSON served by /api/v1/evidence/policies/incident-classification
+// ponytail: tiny rule evaluator (==, >=, <=, in); swap for a CEL engine if policies need real expressions
+let POLICY = null, DEADLINES = [];
+async function loadPolicy() {
+  if (POLICY) return POLICY;
+  POLICY = await safeApi('/api/v1/evidence/policies/incident-classification');
+  if (!POLICY) throw new Error('Could not load incident classification policy');
+  DEADLINES = POLICY.deadlines.map(d => [d.label, d.hours * 3600e3, d.stage]);
+  return POLICY;
+}
+const OPS = { '==':(a,b)=>a===b, '>=':(a,b)=>a>=b, '<=':(a,b)=>a<=b, 'in':(a,b)=>b.includes(a) };
+function classifyIncident(i) {
+  const get = f => f.split('.').reduce((o,k)=>o?.[k], i);
+  const rule = POLICY.rules.find(r => !r.any.length || r.any.some(c => OPS[c.op]?.(get(c.field), c.value)));
+  return rule ? rule.severity : 'Unclassified';
+}
+const SEV_BADGE = { Major:'badge-red', Significant:'badge-amber', Minor:'badge-gray' };
+function fmtLeft(ms) { if (ms<0) return 'overdue'; const h=ms/3600e3; return h<48 ? h.toFixed(1)+' h left' : Math.round(h/24)+' d left'; }
+function statCard(color, ic, value, label) { return `<div class="stat-card"><div class="stat-icon ${color}">${icon(ic,22)}</div><div class="stat-info"><h3>${value}</h3><p>${label}</p></div></div>`; }
+function govHeader(kicker, title, sub) { return `<div class="page-header"><div class="page-kicker">${kicker}</div><h2>${title}</h2><p>${sub}</p></div>`; }
+async function safeApi(path) { try { return (await api('GET', path)).data; } catch { return null; } }
+
+async function renderMgmt() {
+  setMain(govHeader('Executive governance','Clinical Management Suite','Consent gaps, data integrity and audit readiness across connected hospital systems.') + `<div style="text-align:center;padding:40px"><div class="spinner spinner-dark"></div></div>`);
+  const datasets = (await safeApi('/api/v1/hash/list')) || [];
+  const rows = datasets.map((d,i) => ({ ...d, consent: CONSENT_STATES[i % CONSENT_STATES.length] }));
+  const verified = rows.filter(r => r.consent === 'Verified').length;
+  const gaps = rows.length - verified;
+  const integrity = rows.length ? Math.round(rows.filter(r=>r.consent!=='Flagged').length/rows.length*100) : 100;
+  const patchPct = Math.round(GOV.patch.compliant/GOV.patch.total*100);
+  const readiness = Math.round((integrity + patchPct + (rows.length ? verified/rows.length*100 : 100))/3);
+  const stBadge = { 'Verified':'badge-green', 'Flagged':'badge-red', 'Missing Consent':'badge-amber' };
+  setMain(govHeader('Executive governance','Clinical Management Suite','Consent gaps, data integrity and audit readiness across connected hospital systems.') + `
+    <div class="stats-grid">
+      ${statCard('amber','clipboardCheck',gaps,'Consent gaps (EHDS/GDPR)')}
+      ${statCard('green','checkCircle',integrity+'%','Data integrity score')}
+      ${statCard('blue','barChart',readiness+'%','Audit readiness')}
+      ${statCard('purple','settings',patchPct+'%','Patch compliance ('+GOV.patch.compliant+'/'+GOV.patch.total+')')}
+    </div>
+    <div class="card"><div class="card-header"><span class="card-title">Patient Data 360 Registry</span><span style="font-size:12px;color:var(--muted)">${rows.length} records</span></div>
+      <div class="card-body"><div class="table-wrap"><table><thead><tr><th>Dataset</th><th>Category</th><th>Uploaded by</th><th>Date</th><th>On-chain status</th></tr></thead><tbody>
+      ${rows.map(r=>`<tr><td><strong>${escHtml(r.dataset_id)}</strong></td><td><span class="badge ${RECORD_TYPE_BADGE[r.record_type]||'badge-gray'}">${r.record_type||'—'}</span></td><td>${escHtml(r.uploader_name||'—')}</td><td>${r.uploaded_at?new Date(r.uploaded_at).toLocaleDateString():''}</td><td><span class="badge ${stBadge[r.consent]}">${r.consent}</span></td></tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted)">No datasets yet</td></tr>'}
+      </tbody></table></div></div></div>`);
+}
+
+async function renderItOps() {
+  const health = await fetch('/health').then(r=>r.json()).catch(()=>null);
+  const apiOk = health && (health.status==='healthy');
+  const nodes = [{ name:'COMFORTage API', kind:'API', status: apiOk?'online':'offline', latency:'—' }, ...GOV.nodes];
+  const sBadge = { online:'badge-green', degraded:'badge-amber', offline:'badge-red' };
+  const events = state.itEvents = state.itEvents || [];
+  setMain(govHeader('Estate & security','Hospital IT / ICT Estate','Validation nodes, IPFS DePIN storage, edge endpoints, PKI and the system event stream.') + `
+    <div class="stats-grid">
+      ${statCard('green','activity',nodes.filter(n=>n.status==='online').length+'/'+nodes.length,'Nodes online')}
+      ${statCard('blue','lock',GOV.keys.length,'Active keys & certificates')}
+      ${statCard('amber','clock',GOV.keys.filter(k=>new Date(k.expires)-Date.now()<60*86400e3).length,'Expiring within 60 days')}
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="card-header"><span class="card-title">Node & Storage Telemetry</span></div><div class="card-body"><div class="table-wrap"><table><thead><tr><th>Node</th><th>Type</th><th>Status</th><th>Latency</th></tr></thead><tbody>
+        ${nodes.map(n=>`<tr><td>${n.name}</td><td>${n.kind}</td><td><span class="badge ${sBadge[n.status]}">${n.status}</span></td><td>${n.latency}${typeof n.latency==='number'?' ms':''}</td></tr>`).join('')}
+      </tbody></table></div></div></div>
+      <div class="card"><div class="card-header"><span class="card-title">Key & PKI Administration</span></div><div class="card-body"><div class="table-wrap"><table><thead><tr><th>Key</th><th>Type</th><th>Expires</th><th>Permissions</th></tr></thead><tbody>
+        ${GOV.keys.map(k=>`<tr><td>${k.id}</td><td>${k.type}</td><td>${k.expires}</td><td style="font-size:12px">${k.perms}</td></tr>`).join('')}
+      </tbody></table></div></div></div>
+    </div>
+    <div class="card mt-6"><div class="card-header"><span class="card-title">System Event Stream</span><span style="font-size:12px;color:var(--muted)">this session · hashed</span></div>
+      <div class="card-body"><pre id="evt-stream" style="font-size:12px;max-height:260px;overflow:auto">${events.join('\n') || 'Waiting for events…'}</pre></div></div>`);
+}
+// Append every API call to the IT event stream (wraps existing api())
+const _api = api;
+api = async function(method, path, body, isForm) {
+  const line = `${new Date().toISOString()}  ${state.user?.role||'anon'}  ${method} ${path}`;
+  (state.itEvents = state.itEvents || []).unshift(line);
+  state.itEvents.length = Math.min(state.itEvents.length, 200);
+  const el = document.getElementById('evt-stream'); if (el) el.textContent = state.itEvents.join('\n');
+  return _api(method, path, body, isForm);
+};
+
+async function renderRegulatory() {
+  try { await loadPolicy(); } catch(e) { setMain(`<div class="alert alert-error">${e.message}</div>`); return; }
+  const now = Date.now();
+  setMain(govHeader('Compliance & AI Act','Regulatory Reporting & Incident Register','NIS2 / DORA Art.19 severity classification, supervisory deadlines and signed Evidence Packs.') + `
+    <div class="stats-grid">
+      ${['Major','Significant','Minor'].map(s=>statCard(s==='Major'?'red':s==='Significant'?'amber':'blue','activity',GOV.incidents.filter(i=>classifyIncident(i)===s).length,s+' incidents')).join('')}
+    </div>
+    <div class="card"><div class="card-header"><span class="card-title">Medical Incident Register</span>
+      <span style="display:flex;gap:8px;align-items:center"><span class="badge badge-purple">Policy ${POLICY.id} v${POLICY.version}</span>
+      <button class="btn btn-primary" id="ep-btn" onclick="exportEvidencePack()">${icon('archive',16)} Export Evidence Pack</button></span></div>
+      <div class="card-body"><div class="table-wrap"><table><thead><tr><th>ID</th><th>Incident</th><th>Type</th><th>Severity</th>${DEADLINES.map(d=>`<th>${d[0]}</th>`).join('')}</tr></thead><tbody>
+      ${GOV.incidents.map(i=>{ const sev=classifyIncident(i); const done=DEADLINES.findIndex(d=>d[2]===i.stage);
+        return `<tr><td><strong>${i.id}</strong></td><td>${i.title}</td><td>${i.type}</td><td><span class="badge ${SEV_BADGE[sev]}">${sev}</span></td>
+        ${DEADLINES.map((d,k)=> k<done ? '<td><span class="badge badge-green">Submitted</span></td>' : `<td><span class="badge ${i.opened+d[1]-now<0?'badge-red':'badge-gray'}">${fmtLeft(i.opened+d[1]-now)}</span></td>`).join('')}</tr>`; }).join('')}
+      </tbody></table></div></div></div>`);
+}
+
+async function exportEvidencePack() {
+  const [datasets, audit] = await Promise.all([safeApi('/api/v1/hash/list'), safeApi('/api/v1/hash/audit/summary')]);
+  const pack = {
+    schema: 'comfortage.evidence-pack/1.0',
+    generated_at: new Date().toISOString(),
+    generated_by: { email: state.user?.email, role: state.user?.role },
+    frameworks: ['NIS2','EU AI Act','EHDS','GDPR','DORA Art.19'],
+    provenance_access_log: state.itEvents || [],
+    medical_file_integrity: datasets || [],
+    audit_summary: audit,
+    incidents: GOV.incidents.map(i => ({ ...i, severity: classifyIncident(i) })),
+    ai_model_governance: [{ model:'clinical-triage', version:'2.3.1', note:'simulated pilot entry' }],
+  };
+  pack.policy = { id: POLICY.id, version: POLICY.version };
+  const btn = document.getElementById('ep-btn'); if (btn) { btn.disabled = true; btn.textContent = 'Signing & anchoring…'; }
+  let proof;
+  try { proof = (await api('POST', '/api/v1/evidence/pack', { pack })).data; }
+  catch(e) { toast('Evidence Pack failed: ' + e.message, 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Export Evidence Pack'; } return; }
+  if (btn) { btn.disabled = false; btn.textContent = 'Export Evidence Pack'; }
+  const bundle = { pack, proof };
+  const name = `evidence-pack-${proof.sha256.slice(0,12)}`;
+  const blob = new Blob([JSON.stringify(bundle, null, 2)], { type:'application/json' });
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: name + '.json' });
+  a.click(); URL.revokeObjectURL(a.href);
+  printEvidencePdf(bundle, name);
+  toast(proof.anchor.status === 'confirmed' ? `Signed & anchored in block ${proof.anchor.blockNumber}` : 'Signed — on-chain anchor failed: ' + (proof.anchor.error||''), proof.anchor.status === 'confirmed' ? 'success' : 'error');
+}
+
+// PDF via the browser's print dialog ("Save as PDF") — ponytail: no PDF lib; add server-side rendering if unattended export is needed
+function printEvidencePdf({ pack, proof }, name) {
+  const e = s => escHtml(String(s ?? '—'));
+  const rows = (arr, cols) => `<table><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr>${arr.map(r=>`<tr>${cols.map(c=>`<td>${e(typeof r[c]==='object'?JSON.stringify(r[c]):r[c])}</td>`).join('')}</tr>`).join('')}</table>`;
+  const w = window.open('', '_blank');
+  if (!w) { toast('Allow pop-ups to export the PDF', 'error'); return; }
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${name}</title><style>
+    body{font:12px/1.5 Inter,Arial,sans-serif;color:#0f172a;margin:32px} h1{font-size:20px;margin:0} h2{font-size:14px;margin:20px 0 6px;border-bottom:1px solid #cbd5e1}
+    table{width:100%;border-collapse:collapse;margin-bottom:8px} th,td{border:1px solid #cbd5e1;padding:4px 6px;text-align:left;vertical-align:top;word-break:break-all} th{background:#f1f5f9}
+    .proof{background:#f8fafc;border:1px solid #cbd5e1;padding:10px;font-family:monospace;font-size:10px;word-break:break-all} pre{font-size:10px;white-space:pre-wrap}</style></head><body>
+    <h1>COMFORTage Evidence Pack</h1><div>${e(pack.schema)} · generated ${e(pack.generated_at)} by ${e(pack.generated_by.email)} (${e(pack.generated_by.role)}) · policy ${e(pack.policy.id)} v${e(pack.policy.version)}</div>
+    <div>Frameworks: ${e(pack.frameworks.join(', '))}</div>
+    <h2>Cryptographic proof</h2><div class="proof">SHA-256: ${e(proof.sha256)}<br>Signature (${e(proof.signature.alg)}): ${e(proof.signature.value)}<br>
+      On-chain anchor: ${e(proof.anchor.datasetId)} · status ${e(proof.anchor.status)} · block ${e(proof.anchor.blockNumber)} · tx ${e(proof.anchor.transactionHash)}<br>Signed ${e(proof.signed_at)} by ${e(proof.signed_by)}</div>
+    <pre>${e(proof.signature.publicKeyPem)}</pre>
+    <h2>Incidents</h2>${rows(pack.incidents, ['id','title','type','severity','stage'])}
+    <h2>Medical file integrity</h2>${rows(pack.medical_file_integrity, ['dataset_id','record_type','filename','uploader_name','uploaded_at'])}
+    <h2>Audit summary</h2><pre>${e(JSON.stringify(pack.audit_summary, null, 2))}</pre>
+    <h2>AI model governance</h2>${rows(pack.ai_model_governance, ['model','version','note'])}
+    <h2>Provenance & access log</h2><pre>${e(pack.provenance_access_log.join('\n'))}</pre>
+    <p style="margin-top:24px;color:#64748b">Verify: POST /api/v1/evidence/verify with {pack, signature, anchorId} from the companion ${e(name)}.json.</p>
+    </body></html>`);
+  w.document.close(); w.focus(); w.print();
+}
 
 // Close modals on overlay click
 document.querySelectorAll('.modal-overlay').forEach(el => {

@@ -8,6 +8,7 @@
         "includeFiles": [
           "node_modules/sql.js/dist/sql-wasm.wasm",
           "public/**",
+          "src/policies/**",
           "postman_collection.json"
         ],
         "installCommand": "npm install && npm run compile",

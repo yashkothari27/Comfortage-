@@ -7,13 +7,26 @@ const path = require("path");
 const config = require("./config");
 const logger = require("./logger");
 const { authenticateToken } = require("./middleware/auth");
-const hashRoutes  = require("./routes/hashRoutes");
-const authRoutes  = require("./routes/authRoutes");
-const adminRoutes = require("./routes/adminRoutes");
+const hashRoutes     = require("./routes/hashRoutes");
+const authRoutes     = require("./routes/authRoutes");
+const adminRoutes    = require("./routes/adminRoutes");
+const norionRoutes   = require("./routes/norionRoutes");
+const newsroomRoutes = require("./routes/newsroomRoutes");
+const evidenceRoutes = require("./routes/evidenceRoutes");
 const blockchainService = require("./services/blockchainService");
 const swaggerSpec = require("./swagger");
 
 const app = express();
+
+// Gate all requests until DB init + blockchain init finish.
+// Without this a Vercel cold-start request can arrive before async init
+// completes, returning "DB not initialized" or stale blockchain state.
+let appReady;
+app.use((req, res, next) => {
+  appReady.then(() => next()).catch((err) => {
+    res.status(503).json({ error: "Service initializing, please retry shortly.", detail: err.message });
+  });
+});
 
 // Load Postman collection once at startup (for Vercel serverless compatibility)
 let postmanCollectionBuffer = null;
@@ -177,9 +190,11 @@ app.get("/postman-collection.json", (req, res) => {
 
 // ── Health endpoint (no auth) ──
 app.get("/health", async (req, res) => {
+  const dbModule = require("./db/database");
+  const dbRecords = dbModule.prepare("SELECT COUNT(*) as count FROM datasets").get()?.count || 0;
   const health = await blockchainService.getHealth();
   const statusCode = health.status === "healthy" ? 200 : 503;
-  res.status(statusCode).json(health);
+  res.status(statusCode).json({ ...health, dbRecords });
 });
 
 // ── Diagnostic endpoint (no auth) - for debugging initialization ──
@@ -207,8 +222,11 @@ app.get("/health/debug", (req, res) => {
 app.use("/api/v1/auth", authRoutes);
 
 // ── Protected routes ──
-app.use("/api/v1/hash",  authenticateToken, hashRoutes);
-app.use("/api/v1/admin", authenticateToken, adminRoutes);
+app.use("/api/v1/hash",     authenticateToken, hashRoutes);
+app.use("/api/v1/admin",    authenticateToken, adminRoutes);
+app.use("/api/v1/norion",   authenticateToken, norionRoutes);
+app.use("/api/v1/newsroom", authenticateToken, newsroomRoutes);
+app.use("/api/v1/evidence", authenticateToken, evidenceRoutes);
 
 // ── 404 ──
 app.use((req, res) => {
@@ -224,34 +242,40 @@ app.use((err, req, res, next) => {
 // ── Initialization ──
 const db = require("./db/database");
 const { seedUsers } = require("../scripts/seed-users");
+const { seedDemoDatasets } = require("../scripts/seed-demo-datasets");
 
-// Start server with async initialization
 async function startServer() {
-  try {
-    // Initialize database
-    await db.init();
-    logger.info("Database initialized");
+  await db.init();
+  logger.info("Database initialized");
 
-    // Auto-seed test users if DB is empty
-    const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get()?.count || 0;
-    if (userCount === 0) {
-      try {
-        await seedUsers(true);
-        logger.info("Test users auto-seeded (fresh database)");
-      } catch (err) {
-        logger.error("Auto-seed failed:", err.message, err.stack);
-      }
+  const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get()?.count || 0;
+  if (userCount === 0) {
+    try {
+      await seedUsers(true);
+      logger.info("Test users auto-seeded");
+    } catch (err) {
+      logger.error("Auto-seed (users) failed:", err.message);
     }
-
-    // Initialize blockchain service
-    await blockchainService.initialize();
-    logger.info("Blockchain service initialized successfully");
-  } catch (error) {
-    logger.error("Initialization failed:", error.message);
-    if (error.stack) logger.error("Stack trace:", error.stack);
   }
 
-  // Start HTTP server only when run directly
+  const datasetCount = db.prepare("SELECT COUNT(*) as count FROM datasets").get()?.count || 0;
+  if (datasetCount === 0) {
+    try {
+      await seedDemoDatasets(true);
+      logger.info("Demo datasets auto-seeded");
+    } catch (err) {
+      logger.error("Auto-seed (datasets) failed:", err.message);
+    }
+  }
+
+  // Blockchain init is best-effort — dashboard falls back to dbRecords if RPC is down
+  try {
+    await blockchainService.initialize();
+    logger.info("Blockchain service initialized");
+  } catch (error) {
+    logger.warn("Blockchain init failed (stats will use local DB count):", error.message);
+  }
+
   if (require.main === module) {
     console.log(`
   ╔═══════════════════════════════════════════════════════════╗
@@ -268,12 +292,10 @@ async function startServer() {
   }
 }
 
-// Auto-seed test users if DB is empty (Vercel /tmp resets on every cold start)
-// This will be handled in startServer() now
+appReady = startServer();
 
-startServer().catch(err => {
-  logger.error("Failed to start server:", err);
-  process.exit(1);
+appReady.catch(err => {
+  logger.error("Failed to start server:", err.message);
 });
 
 // ── Vercel serverless export ──
