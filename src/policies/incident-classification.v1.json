@@ -1,0 +1,20 @@
+{
+  "id": "incident-classification",
+  "version": "1.0.0",
+  "effective_from": "2026-11-01",
+  "basis": ["NIS2 Art.23", "DORA Art.19", "EU AI Act Art.73"],
+  "note": "First matching rule wins. Edit/version this file as implementing acts change; no code change needed.",
+  "rules": [
+    { "severity": "Major",       "any": [ { "field": "impact.cross", "op": "==", "value": true },
+                                          { "field": "impact.patients", "op": ">=", "value": 1000 },
+                                          { "field": "impact.hours", "op": ">=", "value": 4 } ] },
+    { "severity": "Significant", "any": [ { "field": "impact.patients", "op": ">=", "value": 100 },
+                                          { "field": "type", "op": "in", "value": ["Security", "AI Act"] } ] },
+    { "severity": "Minor",       "any": [] }
+  ],
+  "deadlines": [
+    { "stage": "initial",      "label": "Initial notification", "hours": 4 },
+    { "stage": "intermediate", "label": "Intermediate report",  "hours": 72 },
+    { "stage": "final",        "label": "Final report",         "hours": 720 }
+  ]
+}
